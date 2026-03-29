@@ -24,9 +24,15 @@ class FlutterSecureSessionStorage implements SessionStorage {
   }
 
   @override
+  Future<String?> readUserSnapshot() {
+    return _storage.read(key: SecureStorageKeys.userSnapshot);
+  }
+
+  @override
   Future<void> saveCredentials({
     required String accessToken,
     String? refreshToken,
+    String? userSnapshot,
   }) async {
     await _storage.write(
       key: SecureStorageKeys.accessToken,
@@ -38,7 +44,17 @@ class FlutterSecureSessionStorage implements SessionStorage {
         key: SecureStorageKeys.refreshToken,
         value: refreshToken,
       );
+    } else {
+      await _storage.delete(key: SecureStorageKeys.refreshToken);
+    }
+
+    if (userSnapshot != null) {
+      await _storage.write(
+        key: SecureStorageKeys.userSnapshot,
+        value: userSnapshot,
+      );
+    } else {
+      await _storage.delete(key: SecureStorageKeys.userSnapshot);
     }
   }
 }
-

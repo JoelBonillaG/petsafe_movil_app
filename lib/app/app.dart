@@ -12,9 +12,8 @@ class PetSafeApp extends StatelessWidget {
       title: 'PetSafe',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      initialRoute: AppRoutes.login,
+      initialRoute: AppRoutes.root,
       onGenerateRoute: AppRouter.onGenerateRoute,
     );
   }
 }
-

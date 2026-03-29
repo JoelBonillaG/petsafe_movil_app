@@ -1,5 +1,7 @@
 class AppRoutes {
+  static const String root = '/';
   static const String login = '/login';
+  static const String recovery = '/recovery';
   static const String shell = '/shell';
   static const String dashboard = '/dashboard';
   static const String pets = '/pets';
@@ -9,4 +11,3 @@ class AppRoutes {
   static const String adoption = '/adoption';
   static const String profile = '/profile';
 }
-
