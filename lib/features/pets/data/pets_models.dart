@@ -358,6 +358,35 @@ String? _readNullableString(Object? value) {
   return text.isEmpty ? null : text;
 }
 
+DateTime? _readDateTime(Object? value) {
+  if (value == null) {
+    return null;
+  }
+
+  if (value is DateTime) {
+    return value;
+  }
+
+  if (value is String) {
+    final text = value.trim();
+    if (text.isEmpty) {
+      return null;
+    }
+
+    return DateTime.tryParse(text);
+  }
+
+  if (value is int) {
+    return DateTime.fromMillisecondsSinceEpoch(value);
+  }
+
+  if (value is num) {
+    return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+  }
+
+  return DateTime.tryParse(value.toString());
+}
+
 bool _readBool(Object? value, {bool fallback = false}) {
   if (value is bool) {
     return value;

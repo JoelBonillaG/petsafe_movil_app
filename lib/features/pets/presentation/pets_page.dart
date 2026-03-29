@@ -1,7 +1,9 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:petsafe_movil_app/app/theme/app_colors.dart';
+import 'package:petsafe_movil_app/core/constants/app_media.dart';
 import 'package:petsafe_movil_app/core/network/api_failure.dart';
+import 'package:petsafe_movil_app/core/widgets/network_image_tiles.dart';
 import 'package:petsafe_movil_app/features/pets/data/pets_models.dart';
 import 'package:petsafe_movil_app/features/pets/data/pets_repository.dart';
 import 'package:petsafe_movil_app/features/pets/data/pets_repository_factory.dart';
@@ -240,58 +242,83 @@ class _PetsPageState extends State<PetsPage> {
   Widget _heroCard(int totalPets, int visiblePets) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFFFFF), Color(0xFFF3F8F7)],
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: NetworkImageCard(
+        imageUrl: AppMedia.dogHeroOne,
+        height: 250,
+        borderRadius: 28,
+        showBorder: false,
+        showShadow: true,
+        overlayGradient: const LinearGradient(
+          colors: [Color(0xCC2F605E), Color(0x991E3A8A), Color(0x331F2937)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+        foreground: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AppColors.activeSoft,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Icon(Icons.pets_rounded, color: AppColors.brand, size: 30),
+              Row(
+                children: [
+                  _glassChip(Icons.pets_rounded, 'Tus mascotas'),
+                  const Spacer(),
+                  const NetworkAvatar(imageUrl: AppMedia.profileHero, size: 48),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Tus mascotas', style: theme.textTheme.titleLarge),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Consulta la informacion principal de cada mascota, su codigo QR y sus datos clinicos clave.',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary, height: 1.45),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Consulta tus perfiles',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Mira fotos, QR, historial clinico y datos clave desde una vista mas visual y cercana.',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withOpacity(0.93),
+                            height: 1.45,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 12),
+                  NetworkImageCard(
+                    imageUrl: AppMedia.catHeroOne,
+                    height: 110,
+                    width: 92,
+                    borderRadius: 22,
+                    showShadow: false,
+                    showBorder: false,
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  _glassChip(Icons.pets_rounded, '$totalPets mascotas'),
+                  const SizedBox(width: 8),
+                  _glassChip(Icons.filter_alt_rounded, '$visiblePets visibles'),
+                  const SizedBox(width: 8),
+                  if (_isFromCache) _glassChip(Icons.cloud_off_rounded, _isOffline ? 'Modo offline' : 'Cache local'),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _chip(Icons.pets_rounded, '$totalPets mascotas'),
-              _chip(Icons.filter_alt_rounded, '$visiblePets visibles'),
-              if (_isFromCache) _chip(Icons.cloud_off_rounded, _isOffline ? 'Modo offline' : 'Cache local'),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -386,11 +413,22 @@ class _PetsPageState extends State<PetsPage> {
 
   Widget _petCard(PetProfile pet) {
     final activeConditions = pet.conditions.where((condition) => condition.active).toList(growable: false);
-    return Card(
-      margin: EdgeInsets.zero,
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceStrong,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A0F172A),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
+      ),
       child: InkWell(
         onTap: () => _showPetDetails(pet),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -399,43 +437,47 @@ class _PetsPageState extends State<PetsPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: AppColors.activeSoft,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Icon(Icons.pets_rounded, color: AppColors.brand),
+                  NetworkImageCard(
+                    imageUrl: _petImageUrl(pet),
+                    height: 92,
+                    width: 92,
+                    borderRadius: 22,
+                    showBorder: false,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(pet.name, style: Theme.of(context).textTheme.titleMedium),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(pet.name, style: Theme.of(context).textTheme.titleMedium),
+                            ),
+                            _statusPill(pet.sexLabel),
+                          ],
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          '${pet.speciesLabel} • ${pet.breedLabel}',
+                          '${pet.speciesLabel} - ${pet.breedLabel}',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        ),
+                        const SizedBox(height: 10),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _infoChip(Icons.badge_outlined, pet.codeLabel),
+                            _infoChip(Icons.fitness_center_rounded, pet.weightLabel),
+                            _infoChip(Icons.cake_outlined, pet.ageLabel),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  _statusPill(pet.sexLabel),
                 ],
               ),
               const SizedBox(height: 14),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _infoChip(Icons.badge_outlined, pet.codeLabel),
-                  _infoChip(Icons.fitness_center_rounded, pet.weightLabel),
-                  _infoChip(Icons.cake_outlined, pet.ageLabel),
-                ],
-              ),
-              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -452,9 +494,27 @@ class _PetsPageState extends State<PetsPage> {
                 ],
               ),
               if (activeConditions.isNotEmpty)
-                Text(
-                  'Condiciones activas: ${activeConditions.length}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.activeSoft,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.healing_rounded, size: 16, color: AppColors.brand),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Condiciones activas: ${activeConditions.length}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.brand,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -545,14 +605,63 @@ class _PetsPageState extends State<PetsPage> {
   }
 
   Widget _loadingPanel() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(vertical: 42),
-      child: Column(
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceStrong,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: const Column(
         children: [
           CircularProgressIndicator(color: AppColors.brand),
           SizedBox(height: 16),
           Text('Cargando mascotas...'),
         ],
+      ),
+    );
+  }
+
+  Widget _glassChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: Colors.white),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroBadge(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withOpacity(0.16)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -600,14 +709,12 @@ class _PetsPageState extends State<PetsPage> {
       ),
       child: Column(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.activeSoft,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: const Icon(Icons.search_off_rounded, color: AppColors.brand, size: 30),
+          NetworkImageCard(
+            imageUrl: AppMedia.dogHeroTwo,
+            height: 120,
+            borderRadius: 22,
+            showBorder: false,
+            showShadow: false,
           ),
           const SizedBox(height: 14),
           Text(
@@ -645,14 +752,12 @@ class _PetsPageState extends State<PetsPage> {
       ),
       child: Column(
         children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: AppColors.activeSoft,
-              borderRadius: BorderRadius.circular(22),
-            ),
-            child: const Icon(Icons.pets_rounded, color: AppColors.brand, size: 30),
+          NetworkImageCard(
+            imageUrl: AppMedia.dogHeroOne,
+            height: 120,
+            borderRadius: 22,
+            showBorder: false,
+            showShadow: false,
           ),
           const SizedBox(height: 14),
           Text(
@@ -707,8 +812,58 @@ class _PetsPageState extends State<PetsPage> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: 'Cerrar',
+                    ),
+                  ),
                   const SizedBox(height: 18),
-                  Text(pet.name, style: theme.textTheme.titleLarge),
+                  NetworkImageCard(
+                    imageUrl: _petImageUrl(pet),
+                    height: 180,
+                    borderRadius: 24,
+                    showBorder: false,
+                    overlayGradient: const LinearGradient(
+                      colors: [Color(0x99000000), Color(0x22000000)],
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                    ),
+                    foreground: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              pet.name,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _heroBadge(pet.speciesLabel),
+                                _heroBadge(pet.breedLabel),
+                                _heroBadge(pet.sexLabel),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Identificacion y datos principales', style: theme.textTheme.titleLarge),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -901,6 +1056,10 @@ class _PetsPageState extends State<PetsPage> {
     return 'PETSAFE|PATIENT|${pet.id}|$code';
   }
 
+  String _petImageUrl(PetProfile pet) {
+    return AppMedia.petImageFor(name: pet.name, species: pet.speciesLabel);
+  }
+
   String _formatDate(DateTime? date) {
     if (date == null) return 'No registrada';
     final day = date.day.toString().padLeft(2, '0');
@@ -913,3 +1072,4 @@ class _PetsPageState extends State<PetsPage> {
     return 'No se pudo cargar la informacion de las mascotas.';
   }
 }
+
