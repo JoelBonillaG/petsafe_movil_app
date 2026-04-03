@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:petsafe_movil_app/app/theme/app_colors.dart';
 import 'package:petsafe_movil_app/core/constants/app_media.dart';
 import 'package:petsafe_movil_app/core/network/api_failure.dart';
+import 'package:petsafe_movil_app/core/widgets/feature_page_scaffold.dart';
 import 'package:petsafe_movil_app/core/widgets/network_image_tiles.dart';
 import 'package:petsafe_movil_app/features/pets/data/pets_models.dart';
 import 'package:petsafe_movil_app/features/pets/data/pets_repository.dart';
@@ -141,17 +142,15 @@ class _PetsPageState extends State<PetsPage> {
     final hasPets = _pets.isNotEmpty;
     final hasMore = _meta?.hasNextPage ?? false;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mascotas'),
-        actions: [
-          if (hasPets || _errorMessage != null)
-            IconButton(
-              onPressed: (_isLoading || _isLoadingMore) ? null : _refresh,
-              icon: const Icon(Icons.refresh_rounded),
-            ),
-        ],
-      ),
+    return FeaturePageScaffold(
+      title: 'Mascotas',
+      appBarActions: [
+        if (hasPets || _errorMessage != null)
+          IconButton(
+            onPressed: (_isLoading || _isLoadingMore) ? null : _refresh,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+      ],
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
@@ -248,7 +247,7 @@ class _PetsPageState extends State<PetsPage> {
         border: Border.all(color: AppColors.border),
       ),
       child: NetworkImageCard(
-        imageUrl: AppMedia.dogHeroOne,
+        imageUrl: AppMedia.petsHero,
         height: 250,
         borderRadius: 28,
         showBorder: false,
@@ -260,63 +259,29 @@ class _PetsPageState extends State<PetsPage> {
         ),
         foreground: Padding(
           padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  _glassChip(Icons.pets_rounded, 'Tus mascotas'),
-                  const Spacer(),
-                  const NetworkAvatar(imageUrl: AppMedia.profileHero, size: 48),
-                ],
-              ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Consulta tus perfiles',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Mira fotos, QR, historial clinico y datos clave desde una vista mas visual y cercana.',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withOpacity(0.93),
-                            height: 1.45,
-                          ),
-                        ),
-                      ],
-                    ),
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mascotas',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(width: 12),
-                  NetworkImageCard(
-                    imageUrl: AppMedia.catHeroOne,
-                    height: 110,
-                    width: 92,
-                    borderRadius: 22,
-                    showShadow: false,
-                    showBorder: false,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tus mascotas, siempre cerca de ti.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.93),
+                    height: 1.45,
                   ),
-                ],
-              ),
-              Row(
-                children: [
-                  _glassChip(Icons.pets_rounded, '$totalPets mascotas'),
-                  const SizedBox(width: 8),
-                  _glassChip(Icons.filter_alt_rounded, '$visiblePets visibles'),
-                  const SizedBox(width: 8),
-                  if (_isFromCache) _glassChip(Icons.cloud_off_rounded, _isOffline ? 'Modo offline' : 'Cache local'),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -783,21 +748,21 @@ class _PetsPageState extends State<PetsPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) {
         final theme = Theme.of(sheetContext);
-        return SafeArea(
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 12,
-              bottom: 20 + MediaQuery.of(sheetContext).viewInsets.bottom,
-            ),
-            child: SingleChildScrollView(
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 12,
+            bottom: 20 + MediaQuery.of(sheetContext).viewInsets.bottom + MediaQuery.of(sheetContext).padding.bottom,
+          ),
+          child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -957,9 +922,8 @@ class _PetsPageState extends State<PetsPage> {
                   ),
                 ],
               ),
-            ),
-          ),
-        );
+              ),
+            );
       },
     );
   }

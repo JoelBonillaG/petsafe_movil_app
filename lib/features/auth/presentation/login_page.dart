@@ -193,6 +193,8 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
 
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -200,42 +202,72 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460),
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Container(
-                          width: 72,
-                          height: 72,
-                          decoration: BoxDecoration(
-                            color: AppColors.activeSoft,
-                            borderRadius: BorderRadius.circular(22),
-                          ),
-                          child: const Icon(
-                            Icons.pets_rounded,
-                            color: AppColors.brand,
-                            size: 34,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'PetSafe',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Accede a tus mascotas, citas e historial clinico desde un solo lugar.',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                                height: 1.45,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 58,
+                              height: 58,
+                              decoration: BoxDecoration(
+                                color: AppColors.activeSoft,
+                                borderRadius: BorderRadius.circular(18),
                               ),
+                              child: const Icon(
+                                Icons.pets_rounded,
+                                color: AppColors.brand,
+                                size: 30,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              'PetSafe',
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.brand,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 24),
+                      ),
+                      const SizedBox(height: 16),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(18),
+                        child: SizedBox(
+                          height: 220,
+                          width: double.infinity,
+                          child: Image.asset(
+                            'assets/images/petsafe_login.png',
+                            fit: BoxFit.contain,
+                            alignment: Alignment.center,
+                            errorBuilder: (context, _, __) {
+                              return Container(
+                                color: AppColors.activeSoft,
+                                alignment: Alignment.center,
+                                child: const Icon(Icons.image_not_supported_rounded, color: AppColors.brand, size: 38),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Bienvenido de nuevo',
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: AppColors.brand,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
@@ -287,53 +319,48 @@ class _LoginPageState extends State<LoginPage> {
                               return 'Ingresa tu contrasena';
                             }
 
-                            if (password.length < 8) {
-                              return 'La contrasena debe tener al menos 8 caracteres';
-                            }
-
                             return null;
                           },
                         ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Checkbox(
-                              value: _rememberSession,
-                              onChanged: _isLoading
-                                  ? null
-                                  : (value) {
-                                      setState(() {
-                                        _rememberSession = value ?? false;
-                                      });
-                                    },
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _rememberSession,
+                            onChanged: _isLoading
+                                ? null
+                                : (value) {
+                                    setState(() {
+                                      _rememberSession = value ?? false;
+                                    });
+                                  },
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Recordar contraseña',
+                              style: theme.textTheme.bodyMedium,
                             ),
-                            const SizedBox(width: 4),
-                            Expanded(
-                              child: Text(
-                                'Recordar sesion',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _isLoading ? null : _enterApp,
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.2),
-                                )
-                              : const Text('Entrar'),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: _isLoading ? null : _openRecovery,
-                          child: const Text('Recuperar contrasena'),
-                        ),
-                      ],
-                    ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _enterApp,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2.2),
+                              )
+                            : const Text('Entrar'),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _isLoading ? null : _openRecovery,
+                        child: const Text('Recuperar contrasena'),
+                      ),
+                    ],
                   ),
                 ),
               ),

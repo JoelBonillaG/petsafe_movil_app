@@ -1,27 +1,29 @@
 class AppMedia {
-  static const String dashboardHero =
-      'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=1200&q=80';
-  static const String clinicHero =
-      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?auto=format&fit=crop&w=1200&q=80';
-  static const String adoptionHero =
-      'https://images.unsplash.com/photo-1548767797-d8c844163c4c?auto=format&fit=crop&w=1200&q=80';
-  static const String profileHero =
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=1200&q=80';
-  static const String ownerHero =
-      'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=1200&q=80';
-  static const String vetHero =
-      'https://images.unsplash.com/photo-1576765607924-3f7f1a0a0c2b?auto=format&fit=crop&w=1200&q=80';
+  // Local asset images
+  static const String dashboardHero = 'assets/images/home_page_image.png';
+  static const String clinicHero = 'assets/images/clinical_date_page_image.png';
+  static const String historyHero = 'assets/images/historial_pet_page_image.png';
+  static const String adoptionHero = 'assets/images/adopt_pet_page_image.png';
+  static const String petsHero = 'assets/images/pets_page_image.png';
+  static const String profileHero = 'assets/images/recover_password.png';
+  static const String ownerHero = 'assets/images/home_page_image.png';
+  static const String vetHero = 'assets/images/clinical_date_page_image.png';
 
-  static const String dogHeroOne =
-      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80';
-  static const String dogHeroTwo =
-      'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=900&q=80';
-  static const String dogHeroThree =
-      'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=900&q=80';
-  static const String catHeroOne =
-      'https://images.unsplash.com/photo-1511044568932-338cba0ad803?auto=format&fit=crop&w=900&q=80';
-  static const String catHeroTwo =
-      'https://images.unsplash.com/photo-1513245543132-31f507417b26?auto=format&fit=crop&w=900&q=80';
+  // Pet adoption images
+  static const String adoptPetOne = 'assets/images/adopt_pet1.png';
+  static const String adoptPetTwo = 'assets/images/adopt_pet2.png';
+  static const String adoptPetThree = 'assets/images/adopt_pet3.png';
+
+  // My pets images
+  static const String myPetOne = 'assets/images/my_pet1.png';
+  static const String myPetTwo = 'assets/images/my_pet2.png';
+
+  // Hero images for dashboard
+  static const String dogHeroOne = 'assets/images/my_pet1.png';
+  static const String dogHeroTwo = 'assets/images/adopt_pet1.png';
+  static const String dogHeroThree = 'assets/images/adopt_pet2.png';
+  static const String catHeroOne = 'assets/images/my_pet2.png';
+  static const String catHeroTwo = 'assets/images/adopt_pet3.png';
 
   static String petImageFor({
     required String name,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:petsafe_movil_app/app/theme/app_colors.dart';
 import 'package:petsafe_movil_app/core/constants/app_media.dart';
+import 'package:petsafe_movil_app/core/widgets/feature_page_scaffold.dart';
 import 'package:petsafe_movil_app/core/widgets/network_image_tiles.dart';
 
 class AdoptionPage extends StatefulWidget {
@@ -23,7 +24,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
       story:
           'Es una gata tranquila y curiosa que disfruta los espacios calmados y la compania cercana.',
       traits: <String>['Sociable', 'Juguetona', 'Esterilizada'],
-      compatibility: 'Ideal para hogares tranquilos y familias con experiencia en gatos.',
+      compatibility:
+          'Ideal para hogares tranquilos y familias con experiencia en gatos.',
+      contactPhone: '0991112233',
       filter: 'Gatos',
       color: AppColors.accent,
     ),
@@ -39,6 +42,7 @@ class _AdoptionPageState extends State<AdoptionPage> {
           'Tiene energia media, le gustan los paseos y responde muy bien al refuerzo positivo.',
       traits: <String>['Amigable', 'Activo', 'Vacunado'],
       compatibility: 'Buen candidato para familia activa o casa con patio.',
+      contactPhone: '0985554477',
       filter: 'Perros',
       color: AppColors.brand,
     ),
@@ -53,7 +57,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
       story:
           'Cachorro afectuoso, muy sociable y con gran facilidad para aprender rutinas.',
       traits: <String>['Cachorro', 'Sociable', 'Listo para adoptar'],
-      compatibility: 'Ideal para familias que quieran acompañarlo en su etapa de aprendizaje.',
+      compatibility:
+          'Ideal para familias que quieran acompañarlo en su etapa de aprendizaje.',
+      contactPhone: '0973210099',
       filter: 'Cachorros',
       color: AppColors.success,
     ),
@@ -69,12 +75,19 @@ class _AdoptionPageState extends State<AdoptionPage> {
           'Le gusta observar desde lugares altos y se adapta bien a rutinas calmadas.',
       traits: <String>['Independiente', 'Elegante', 'Vacunada'],
       compatibility: 'Se adapta bien a apartamentos y espacios interiores.',
+      contactPhone: '0968877441',
       filter: 'Adultos',
       color: AppColors.primary,
     ),
   ];
 
-  final List<String> _filters = <String>['Todos', 'Perros', 'Gatos', 'Cachorros', 'Adultos'];
+  final List<String> _filters = <String>[
+    'Todos',
+    'Perros',
+    'Gatos',
+    'Cachorros',
+    'Adultos',
+  ];
 
   String _selectedFilter = 'Todos';
 
@@ -82,17 +95,17 @@ class _AdoptionPageState extends State<AdoptionPage> {
     if (_selectedFilter == 'Todos') {
       return _pets;
     }
-    return _pets.where((pet) => pet.filter == _selectedFilter).toList(growable: false);
+    return _pets
+        .where((pet) => pet.filter == _selectedFilter)
+        .toList(growable: false);
   }
 
   @override
   Widget build(BuildContext context) {
     final visiblePets = _visiblePets;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Adopcion'),
-      ),
+    return FeaturePageScaffold(
+      title: 'Adopcion',
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
         children: [
@@ -108,18 +121,20 @@ class _AdoptionPageState extends State<AdoptionPage> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _filters.map((filter) {
-              final selected = filter == _selectedFilter;
-              return FilterChip(
-                label: Text(filter),
-                selected: selected,
-                onSelected: (_) {
-                  setState(() {
-                    _selectedFilter = filter;
-                  });
-                },
-              );
-            }).toList(growable: false),
+            children: _filters
+                .map((filter) {
+                  final selected = filter == _selectedFilter;
+                  return FilterChip(
+                    label: Text(filter),
+                    selected: selected,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedFilter = filter;
+                      });
+                    },
+                  );
+                })
+                .toList(growable: false),
           ),
           const SizedBox(height: 16),
           Text(
@@ -171,47 +186,29 @@ class _AdoptionPageState extends State<AdoptionPage> {
         ),
         foreground: Padding(
           padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  _glassChip(Icons.favorite_rounded, 'Adopcion'),
-                  const Spacer(),
-                  const NetworkAvatar(imageUrl: AppMedia.profileHero, size: 48),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mascotas con historia',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Mascotas con historia',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Explora perfiles visuales con fotos reales, filtros rapidos y un flujo de adopcion mas humano.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withOpacity(0.93),
-                      height: 1.45,
-                    ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Adopta y ayuda a una mascota revisando su perfil y dando el primer paso.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.93),
+                    height: 1.45,
                   ),
-                ],
-              ),
-              Row(
-                children: [
-                  _glassChip(Icons.pets_rounded, '${_pets.length} en total'),
-                  const SizedBox(width: 8),
-                  _glassChip(Icons.visibility_rounded, '$visibleCount visibles'),
-                  const SizedBox(width: 8),
-                  _glassChip(Icons.verified_rounded, 'Perfil de adopcion'),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -235,9 +232,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
             child: Text(
               'Vista modelada con datos estaticos. Luego conectaremos el catalogo real y el flujo de solicitud de adopcion.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
             ),
           ),
         ],
@@ -284,25 +281,29 @@ class _AdoptionPageState extends State<AdoptionPage> {
                     children: [
                       Row(
                         children: [
-                          Expanded(child: Text(pet.name, style: theme.textTheme.titleMedium)),
+                          Expanded(
+                            child: Text(
+                              pet.name,
+                              style: theme.textTheme.titleMedium,
+                            ),
+                          ),
                           _statusPill(pet.filter),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${pet.species} - ${pet.breed}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                        'Raza: ${pet.breed}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
-                      const SizedBox(height: 10),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _chip(Icons.cake_outlined, pet.age),
-                          _chip(Icons.wc_rounded, pet.sex),
-                          _chip(Icons.straighten_rounded, pet.size),
-                          _chip(Icons.place_rounded, pet.location),
-                        ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Contacto: ${pet.contactPhone}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.brand,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
@@ -321,24 +322,18 @@ class _AdoptionPageState extends State<AdoptionPage> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: pet.traits.map((trait) => _traitChip(trait)).toList(growable: false),
+              children: pet.traits
+                  .map((trait) => _traitChip(trait))
+                  .toList(growable: false),
             ),
             const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: ElevatedButton.icon(
                     onPressed: () => _showDetails(pet),
                     icon: const Icon(Icons.visibility_rounded),
-                    label: const Text('Ver ficha'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _showPendingAction,
-                    icon: const Icon(Icons.favorite_border_rounded),
-                    label: const Text('Me interesa'),
+                    label: const Text('Ver mas'),
                   ),
                 ),
               ],
@@ -385,7 +380,11 @@ class _AdoptionPageState extends State<AdoptionPage> {
             child: Text(
               label,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
@@ -403,9 +402,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.accent,
-              fontWeight: FontWeight.w600,
-            ),
+          color: AppColors.accent,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -420,9 +419,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.brand,
-              fontWeight: FontWeight.w700,
-            ),
+          color: AppColors.brand,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -455,9 +454,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
             'Cambia el filtro para ver otros perfiles de adopcion disponibles.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
+              color: AppColors.textSecondary,
+              height: 1.45,
+            ),
           ),
         ],
       ),
@@ -473,9 +472,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
         color: AppColors.brand,
       ),
       const _ProcessStep(
-        title: 'Solicitar interes',
-        subtitle: 'Envias una solicitud para continuar el proceso.',
-        icon: Icons.favorite_border_rounded,
+        title: 'Ver mas y contactar',
+        subtitle: 'Revisas la ficha completa y te comunicas por telefono.',
+        icon: Icons.phone_rounded,
         color: AppColors.warning,
       ),
       const _ProcessStep(
@@ -535,9 +534,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
               Text(
                 step.subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.4,
-                    ),
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -550,145 +549,153 @@ class _AdoptionPageState extends State<AdoptionPage> {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: IconButton(
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      icon: const Icon(Icons.close_rounded),
-                      tooltip: 'Cerrar',
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  NetworkImageCard(
-                    imageUrl: AppMedia.adoptionImageFor(pet.name),
-                    height: 180,
-                    borderRadius: 24,
-                    showBorder: false,
-                    overlayGradient: const LinearGradient(
-                      colors: [Color(0x99000000), Color(0x22000000)],
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                    ),
-                    foreground: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Align(
-                        alignment: Alignment.bottomLeft,
-                        child: Text(
-                          pet.name,
-                          style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
-                              ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text('Ficha de adopcion', style: Theme.of(sheetContext).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _chip(Icons.pets_rounded, pet.species),
-                      _chip(Icons.place_rounded, pet.location),
-                      _chip(Icons.favorite_rounded, pet.filter),
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Container(
-                    padding: const EdgeInsets.all(16),
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            12,
+            20,
+            20 +
+                MediaQuery.of(sheetContext).viewInsets.bottom +
+                MediaQuery.of(sheetContext).padding.bottom,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.surfaceStrong,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _detailRow('Raza', pet.breed),
-                        _detailRow('Edad', pet.age),
-                        _detailRow('Sexo', pet.sex),
-                        _detailRow('Tamano', pet.size),
-                        _detailRow('Disponibilidad', 'Lista para conocer a su futura familia'),
-                        const SizedBox(height: 10),
-                        Text(
-                          pet.story,
-                          style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                                height: 1.45,
-                              ),
-                        ),
-                        const SizedBox(height: 14),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: pet.traits
-                              .map((trait) => _traitChip(trait))
-                              .toList(growable: false),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'Compatibilidad',
-                          style: Theme.of(sheetContext).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          pet.compatibility,
-                          style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.textSecondary,
-                                height: 1.45,
-                              ),
-                        ),
-                      ],
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(999),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _showPendingAction,
-                          icon: const Icon(Icons.message_rounded),
-                          label: const Text('Contactar'),
-                        ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(sheetContext).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                    tooltip: 'Cerrar',
+                  ),
+                ),
+                const SizedBox(height: 18),
+                NetworkImageCard(
+                  imageUrl: AppMedia.adoptionImageFor(pet.name),
+                  height: 180,
+                  borderRadius: 24,
+                  showBorder: false,
+                  overlayGradient: const LinearGradient(
+                    colors: [Color(0x99000000), Color(0x22000000)],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                  foreground: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Text(
+                        pet.name,
+                        style: Theme.of(sheetContext).textTheme.titleLarge
+                            ?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: _showPendingAction,
-                          icon: const Icon(Icons.favorite_rounded),
-                          label: const Text('Me interesa'),
-                        ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Ficha de adopcion',
+                  style: Theme.of(sheetContext).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _chip(Icons.pets_rounded, pet.species),
+                    _chip(Icons.place_rounded, pet.location),
+                    _chip(Icons.favorite_rounded, pet.filter),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceStrong,
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _detailRow('Raza', pet.breed),
+                      _detailRow('Edad', pet.age),
+                      _detailRow('Sexo', pet.sex),
+                      _detailRow('Tamano', pet.size),
+                      _detailRow('Telefono', pet.contactPhone),
+                      _detailRow(
+                        'Disponibilidad',
+                        'Lista para conocer a su futura familia',
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        pet.story,
+                        style: Theme.of(sheetContext).textTheme.bodyMedium
+                            ?.copyWith(
+                              color: AppColors.textSecondary,
+                              height: 1.45,
+                            ),
+                      ),
+                      const SizedBox(height: 14),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: pet.traits
+                            .map((trait) => _traitChip(trait))
+                            .toList(growable: false),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        'Compatibilidad',
+                        style: Theme.of(sheetContext).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        pet.compatibility,
+                        style: Theme.of(sheetContext).textTheme.bodyMedium
+                            ?.copyWith(
+                              color: AppColors.textSecondary,
+                              height: 1.45,
+                            ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showPendingAction,
+                        icon: const Icon(Icons.phone_rounded),
+                        label: Text('Llamar: ${pet.contactPhone}'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         );
@@ -706,7 +713,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
             flex: 4,
             child: Text(
               label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
             ),
           ),
           const SizedBox(width: 12),
@@ -715,7 +724,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -726,7 +737,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
   void _showPendingAction() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Catalogo modelado. Luego conectaremos el flujo real de adopcion.'),
+        content: Text(
+          'Catalogo modelado. Luego conectaremos el flujo real de adopcion.',
+        ),
       ),
     );
   }
@@ -744,6 +757,7 @@ class _AdoptionPet {
     required this.story,
     required this.traits,
     required this.compatibility,
+    required this.contactPhone,
     required this.filter,
     required this.color,
   });
@@ -758,6 +772,7 @@ class _AdoptionPet {
   final String story;
   final List<String> traits;
   final String compatibility;
+  final String contactPhone;
   final String filter;
   final Color color;
 }

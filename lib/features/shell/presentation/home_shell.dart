@@ -5,7 +5,6 @@ import 'package:petsafe_movil_app/features/appointments/presentation/appointment
 import 'package:petsafe_movil_app/features/dashboard/presentation/dashboard_page.dart';
 import 'package:petsafe_movil_app/features/history/presentation/history_page.dart';
 import 'package:petsafe_movil_app/features/pets/presentation/pets_page.dart';
-import 'package:petsafe_movil_app/features/profile/presentation/profile_page.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -23,7 +22,6 @@ class _HomeShellState extends State<HomeShell> {
     AppointmentsPage(),
     HistoryPage(),
     AdoptionPage(),
-    ProfilePage(),
   ];
 
   @override
@@ -87,11 +85,6 @@ class _HomeShellState extends State<HomeShell> {
                   icon: Icon(Icons.favorite_border_rounded),
                   selectedIcon: Icon(Icons.favorite_rounded),
                   label: 'Adopcion',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.person_outline_rounded),
-                  selectedIcon: Icon(Icons.person_rounded),
-                  label: 'Perfil',
                 ),
               ],
             ),
