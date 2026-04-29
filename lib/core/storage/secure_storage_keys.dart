@@ -1,0 +1,6 @@
+class SecureStorageKeys {
+  static const String accessToken = 'access_token';
+  static const String refreshToken = 'refresh_token';
+  static const String rememberSession = 'remember_session';
+  static const String userSnapshot = 'user_snapshot';
+}
