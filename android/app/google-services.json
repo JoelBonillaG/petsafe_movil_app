@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "734450213493",
+    "project_id": "petsafe-movil",
+    "storage_bucket": "petsafe-movil.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:734450213493:android:e7207f3e37387d034d8e3c",
+        "android_client_info": {
+          "package_name": "com.example.petsafe_movil_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCVC-4fkpvQ_aysTjriNJqFAEQz24Sm0bg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
