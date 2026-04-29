@@ -19,6 +19,7 @@ class PetsPage extends StatefulWidget {
 
 class _PetsPageState extends State<PetsPage> {
   static const int _pageSize = 50;
+  static const bool _showRefreshAppBarAction = false;
 
   final TextEditingController _searchController = TextEditingController();
   PetsRepository? _repository;
@@ -33,10 +34,26 @@ class _PetsPageState extends State<PetsPage> {
   int _currentPage = 0;
   String _searchQuery = '';
 
+  DateTime? _lastLoaded;
+  bool _wasTickerActive = false;
+  static const _staleDuration = Duration(seconds: 60);
+
   @override
   void initState() {
     super.initState();
     _bootstrap();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isNowActive = TickerMode.of(context);
+    if (isNowActive && !_wasTickerActive && !_isBootstrapping) {
+      final stale = _lastLoaded == null ||
+          DateTime.now().difference(_lastLoaded!) > _staleDuration;
+      if (stale) _refresh();
+    }
+    _wasTickerActive = isNowActive;
   }
 
   @override
@@ -94,6 +111,7 @@ class _PetsPageState extends State<PetsPage> {
         _isFromCache = result.fromCache;
         _isOffline = result.isOffline;
         _pets = reset ? result.pets : _mergePets(_pets, result.pets);
+        if (!result.fromCache) _lastLoaded = DateTime.now();
       });
     } on ApiFailure catch (error) {
       if (!mounted) return;
@@ -145,7 +163,7 @@ class _PetsPageState extends State<PetsPage> {
     return FeaturePageScaffold(
       title: 'Mascotas',
       appBarActions: [
-        if (hasPets || _errorMessage != null)
+        if (_showRefreshAppBarAction && (hasPets || _errorMessage != null))
           IconButton(
             onPressed: (_isLoading || _isLoadingMore) ? null : _refresh,
             icon: const Icon(Icons.refresh_rounded),
@@ -206,8 +224,6 @@ class _PetsPageState extends State<PetsPage> {
                 const SizedBox(height: 16),
               ] else
                 const SizedBox(height: 16),
-              _summaryCard(totalPets, _pets.length, visiblePets.length, hasMore, _isLoadingMore),
-              const SizedBox(height: 16),
               if (visiblePets.isEmpty)
                 _emptyFilterState()
               else
@@ -307,74 +323,6 @@ class _PetsPageState extends State<PetsPage> {
     );
   }
 
-  Widget _summaryCard(int totalPets, int loadedPets, int visiblePets, bool hasMore, bool isLoadingMore) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceStrong,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Resumen', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _metric('Totales', totalPets.toString(), Icons.pets_rounded)),
-              const SizedBox(width: 12),
-              Expanded(child: _metric('Cargadas', loadedPets.toString(), Icons.storage_rounded)),
-              const SizedBox(width: 12),
-              Expanded(child: _metric('Mostradas', visiblePets.toString(), Icons.visibility_rounded)),
-            ],
-          ),
-          if (hasMore) ...[
-            const SizedBox(height: 14),
-            Text(
-              'Hay mas mascotas disponibles en el servidor.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: isLoadingMore
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  : OutlinedButton.icon(
-                      onPressed: _loadMore,
-                      icon: const Icon(Icons.add_rounded),
-                      label: const Text('Cargar mas mascotas'),
-                    ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _metric(String label, String value, IconData icon) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: AppColors.brand),
-          const SizedBox(height: 10),
-          Text(value, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
-        ],
-      ),
-    );
-  }
 
   Widget _petCard(PetProfile pet) {
     final activeConditions = pet.conditions.where((condition) => condition.active).toList(growable: false);
@@ -432,7 +380,7 @@ class _PetsPageState extends State<PetsPage> {
                           spacing: 8,
                           runSpacing: 8,
                           children: [
-                            _infoChip(Icons.badge_outlined, pet.codeLabel),
+                            if (pet.hasCode) _infoChip(Icons.badge_outlined, pet.codeLabel),
                             _infoChip(Icons.fitness_center_rounded, pet.weightLabel),
                             _infoChip(Icons.cake_outlined, pet.ageLabel),
                           ],
@@ -827,18 +775,6 @@ class _PetsPageState extends State<PetsPage> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Text('Identificacion y datos principales', style: theme.textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _infoChip(Icons.badge_outlined, pet.codeLabel),
-                      _infoChip(Icons.pets_rounded, pet.speciesLabel),
-                      _infoChip(Icons.qr_code_rounded, 'QR'),
-                    ],
-                  ),
                   const SizedBox(height: 18),
                   Container(
                     width: double.infinity,
@@ -858,8 +794,10 @@ class _PetsPageState extends State<PetsPage> {
                           size: 180,
                           backgroundColor: Colors.white,
                         ),
-                        const SizedBox(height: 12),
-                        Text(pet.codeLabel, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        if (pet.hasCode) ...[
+                          const SizedBox(height: 12),
+                          Text(pet.codeLabel, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        ],
                         const SizedBox(height: 12),
                         TextButton.icon(
                           onPressed: () async {

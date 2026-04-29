@@ -25,6 +25,16 @@ class PetsRepository {
   final NetworkStatusService _networkStatusService;
   final SessionStorage _sessionStorage;
 
+  Future<PetProfile> loadPetById(int id) async {
+    try {
+      return await _apiService.getPatientById(id);
+    } on DioException catch (error) {
+      throw ApiFailure.fromDioException(error);
+    } catch (error) {
+      throw ApiFailure.fromError(error);
+    }
+  }
+
   Future<PetsListResult> loadPets({
     int page = 1,
     int limit = 50,

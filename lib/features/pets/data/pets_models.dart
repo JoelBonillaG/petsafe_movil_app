@@ -163,7 +163,9 @@ class PetProfile {
   final PetCatalogItem? color;
   final List<PetCondition> conditions;
 
-  String get codeLabel => code.trim().isNotEmpty ? code.trim() : 'Sin codigo';
+  bool get hasCode => code.trim().isNotEmpty;
+
+  String get codeLabel => hasCode ? code.trim() : '';
 
   String get speciesLabel => species?.name.trim().isNotEmpty == true ? species!.name.trim() : 'Sin especie';
 

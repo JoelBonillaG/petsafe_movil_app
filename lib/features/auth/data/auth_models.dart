@@ -7,6 +7,7 @@ class AuthUser {
     required this.roles,
     required this.firstName,
     required this.lastName,
+    this.phone,
     required this.isVet,
     required this.requiresPasswordChange,
   });
@@ -16,6 +17,7 @@ class AuthUser {
   final List<String> roles;
   final String firstName;
   final String lastName;
+  final String? phone;
   final bool isVet;
   final bool requiresPasswordChange;
 
@@ -32,13 +34,22 @@ class AuthUser {
   }
 
   factory AuthUser.fromJson(Map<String, dynamic> json) {
+    // /users/me returns person data nested under 'person'; login returns it flat
+    final rawPerson = json['person'];
+    final person = rawPerson is Map
+        ? (rawPerson is Map<String, dynamic>
+            ? rawPerson
+            : rawPerson.cast<String, dynamic>())
+        : <String, dynamic>{};
+
     return AuthUser(
       id: _readInt(json['id'], fallback: 0),
       email: _readString(json['email']),
       roles: _readStringList(json['roles']),
-      firstName: _readString(json['firstName']),
-      lastName: _readString(json['lastName']),
-      isVet: _readBool(json['isVet']),
+      firstName: _readString(json['firstName'], fallback: _readString(person['firstName'])),
+      lastName: _readString(json['lastName'], fallback: _readString(person['lastName'])),
+      phone: _readNullableString(json['phone']) ?? _readNullableString(person['phone']),
+      isVet: _readBool(json['isVet']) || _readBool(json['isVeterinarian']),
       requiresPasswordChange: _readBool(json['requiresPasswordChange']),
     );
   }
@@ -58,6 +69,7 @@ class AuthUser {
       roles: roles,
       firstName: '',
       lastName: '',
+      phone: null,
       isVet: roles.any((value) => value.toUpperCase() == 'MVZ'),
       requiresPasswordChange: requiresPasswordChange,
     );
@@ -70,6 +82,7 @@ class AuthUser {
       'roles': roles,
       'firstName': firstName,
       'lastName': lastName,
+      'phone': phone,
       'isVet': isVet,
       'requiresPasswordChange': requiresPasswordChange,
     };
@@ -196,6 +209,11 @@ int _readInt(Object? value, {required int fallback}) {
 String _readString(Object? value, {String fallback = ''}) {
   final text = value?.toString().trim() ?? '';
   return text.isEmpty ? fallback : text;
+}
+
+String? _readNullableString(Object? value) {
+  final text = value?.toString().trim() ?? '';
+  return text.isEmpty ? null : text;
 }
 
 bool _readBool(Object? value, {bool fallback = false}) {

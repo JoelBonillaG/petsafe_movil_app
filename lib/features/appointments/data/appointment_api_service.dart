@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:petsafe_movil_app/core/network/api_client.dart';
 import 'package:petsafe_movil_app/core/storage/session_storage.dart';
-import 'package:petsafe_movil_app/features/pets/data/pets_models.dart';
+import 'package:petsafe_movil_app/features/appointments/data/appointment_models.dart';
 
-class PetsApiService {
-  PetsApiService({
+class AppointmentApiService {
+  AppointmentApiService({
     required ApiClient apiClient,
     required SessionStorage sessionStorage,
   })  : _apiClient = apiClient,
@@ -15,39 +15,35 @@ class PetsApiService {
 
   Dio get _dio => _apiClient.dio;
 
-  Future<PetsListResult> listPets(PetsListQuery query) async {
+  Future<List<AppointmentRequest>> listMine() async {
     final options = await _authOptions();
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/patients',
-      queryParameters: query.toQueryParameters(),
+    final response = await _dio.get<List<dynamic>>(
+      '/appointment-requests/my',
       options: options,
     );
-
-    return _readListResult(response.data);
+    final data = response.data ?? [];
+    return data.whereType<Map>().map((item) {
+      final map = item is Map<String, dynamic> ? item : item.cast<String, dynamic>();
+      return AppointmentRequest.fromJson(map);
+    }).toList();
   }
 
-  Future<PetProfile> getPatientById(int id) async {
+  Future<AppointmentRequest> create(CreateAppointmentRequestPayload payload) async {
     final options = await _authOptions();
-    final response = await _dio.get<Map<String, dynamic>>(
-      '/patients/$id',
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/appointment-requests',
+      data: payload.toJson(),
       options: options,
     );
-    final data = response.data ?? <String, dynamic>{};
-    return PetProfile.fromJson(data);
+    return AppointmentRequest.fromJson(response.data ?? {});
   }
 
   Future<Options> _authOptions() async {
     final token = await _sessionStorage.readAccessToken();
     final headers = <String, dynamic>{};
-
     if (token != null && token.trim().isNotEmpty) {
       headers['Authorization'] = 'Bearer ${token.trim()}';
     }
-
     return Options(headers: headers);
-  }
-
-  PetsListResult _readListResult(Map<String, dynamic>? data) {
-    return PetsListResult.fromJson(data ?? <String, dynamic>{});
   }
 }

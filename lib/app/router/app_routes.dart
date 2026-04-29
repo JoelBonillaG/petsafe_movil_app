@@ -10,4 +10,5 @@ class AppRoutes {
   static const String reminders = '/reminders';
   static const String adoption = '/adoption';
   static const String profile = '/profile';
+  static const String notifications = '/notifications';
 }

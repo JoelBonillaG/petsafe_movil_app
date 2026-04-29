@@ -3,6 +3,11 @@ import 'package:petsafe_movil_app/app/theme/app_colors.dart';
 import 'package:petsafe_movil_app/core/constants/app_media.dart';
 import 'package:petsafe_movil_app/core/widgets/feature_page_scaffold.dart';
 import 'package:petsafe_movil_app/core/widgets/network_image_tiles.dart';
+import 'package:petsafe_movil_app/features/appointments/data/appointment_models.dart';
+import 'package:petsafe_movil_app/features/appointments/data/appointment_repository.dart';
+import 'package:petsafe_movil_app/features/appointments/data/appointment_repository_factory.dart';
+import 'package:petsafe_movil_app/features/pets/data/pets_models.dart';
+import 'package:petsafe_movil_app/features/pets/data/pets_repository_factory.dart';
 
 class AppointmentsPage extends StatefulWidget {
   const AppointmentsPage({super.key});
@@ -12,38 +17,15 @@ class AppointmentsPage extends StatefulWidget {
 }
 
 class _AppointmentsPageState extends State<AppointmentsPage> {
-  late final List<_AppointmentPet> _pets = <_AppointmentPet>[
-    const _AppointmentPet(name: 'Luna', species: 'Perro', breed: 'Labrador', code: 'PET-001'),
-    const _AppointmentPet(name: 'Mia', species: 'Gato', breed: 'Angora', code: 'PET-014'),
-    const _AppointmentPet(name: 'Rocky', species: 'Perro', breed: 'Criollo', code: 'PET-019'),
-  ];
+  late final AppointmentRepository _repo;
 
-  late final List<_AppointmentRequest> _requests = <_AppointmentRequest>[
-    const _AppointmentRequest(
-      petName: 'Luna',
-      type: 'Control general',
-      date: '18/03/2026',
-      time: '09:30',
-      status: _AppointmentStatus.pending,
-      note: 'En espera de revision del veterinario.',
-    ),
-    const _AppointmentRequest(
-      petName: 'Mia',
-      type: 'Vacunacion',
-      date: '12/03/2026',
-      time: '15:00',
-      status: _AppointmentStatus.confirmed,
-      note: 'Confirmada por el veterinario y lista para atencion.',
-    ),
-    const _AppointmentRequest(
-      petName: 'Rocky',
-      type: 'Desparasitacion',
-      date: '06/03/2026',
-      time: '11:00',
-      status: _AppointmentStatus.rejected,
-      note: 'Reprogramada por disponibilidad de agenda.',
-    ),
-  ];
+  List<PetProfile> _pets = [];
+  List<AppointmentRequest> _requests = [];
+
+  bool _isLoadingPets = false;
+  bool _isLoadingRequests = true;
+  bool _isSending = false;
+  String? _requestsError;
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _reasonController = TextEditingController();
@@ -52,11 +34,65 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
   DateTime? _preferredDate;
   TimeOfDay? _preferredTime;
 
+  DateTime? _lastLoaded;
+  bool _wasTickerActive = false;
+  static const _staleDuration = Duration(seconds: 60);
+
   @override
   void initState() {
     super.initState();
+    _repo = AppointmentRepositoryFactory.create();
     _preferredDate = DateTime.now().add(const Duration(days: 7));
     _preferredTime = const TimeOfDay(hour: 9, minute: 30);
+    _loadPets();
+    _loadRequests();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isNowActive = TickerMode.of(context);
+    if (isNowActive && !_wasTickerActive) {
+      final stale = _lastLoaded == null ||
+          DateTime.now().difference(_lastLoaded!) > _staleDuration;
+      if (stale) _loadRequests();
+    }
+    _wasTickerActive = isNowActive;
+  }
+
+  Future<void> _loadPets() async {
+    setState(() => _isLoadingPets = true);
+    try {
+      final repo = await PetsRepositoryFactory.create();
+      final result = await repo.loadPets(limit: 100);
+      if (mounted) {
+        setState(() {
+          _pets = result.pets;
+          _selectedPetIndex = 0;
+        });
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _isLoadingPets = false);
+    }
+  }
+
+  Future<void> _loadRequests() async {
+    setState(() {
+      _isLoadingRequests = true;
+      _requestsError = null;
+    });
+    try {
+      final items = await _repo.loadMine();
+      if (mounted) setState(() {
+        _requests = items;
+        _lastLoaded = DateTime.now();
+      });
+    } catch (_) {
+      if (mounted) setState(() => _requestsError = 'No se pudieron cargar las solicitudes.');
+    } finally {
+      if (mounted) setState(() => _isLoadingRequests = false);
+    }
   }
 
   @override
@@ -65,69 +101,128 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     super.dispose();
   }
 
-  _AppointmentPet get _selectedPet => _pets[_selectedPetIndex];
+  PetProfile? get _selectedPet =>
+      _pets.isNotEmpty ? _pets[_selectedPetIndex] : null;
 
   @override
   Widget build(BuildContext context) {
     return FeaturePageScaffold(
       title: 'Citas medicas',
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-        children: [
-          _heroCard(),
-          const SizedBox(height: 16),
-          _modeBanner(),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _showRequestModal,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Solicitar cita'),
-                ),
+      appBarActions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: AppColors.warning.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: _showAppointmentsFlowInfo,
+              tooltip: 'Ver flujo de citas',
+              padding: EdgeInsets.zero,
+              icon: const Icon(
+                Icons.error_outline_rounded,
+                size: 18,
+                color: AppColors.warning,
               ),
-            ],
+            ),
           ),
-          const SizedBox(height: 16),
-          Text(
-            'Solicitudes recientes',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          if (_requests.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.surfaceStrong,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Center(
-                child: Text(
-                  'No tienes solicitudes aun',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
+        ),
+      ],
+      body: RefreshIndicator(
+        onRefresh: _loadRequests,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+          children: [
+            _heroCard(),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _showRequestModal,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Solicitar cita'),
                   ),
                 ),
-              ),
-            )
-          else
-            ..._requests
-                .map((request) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _requestCard(request),
-                    ))
-                .toList(growable: false),
-          const SizedBox(height: 6),
-          Text(
-            'Flujo de aprobacion',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          _flowCard(),
-        ],
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Solicitudes recientes',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            _buildRequestsList(),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildRequestsList() {
+    if (_isLoadingRequests) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(color: AppColors.brand),
+        ),
+      );
+    }
+
+    if (_requestsError != null) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceStrong,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          children: [
+            Text(_requestsError!, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _loadRequests,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_requests.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceStrong,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Center(
+          child: Text(
+            'No tienes solicitudes aun',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _requests
+          .map((r) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: GestureDetector(
+                  onTap: () => _showRequestDetail(r),
+                  child: _requestCard(r),
+                ),
+              ))
+          .toList(growable: false),
     );
   }
 
@@ -141,143 +236,166 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (sheetContext) {
-        return FractionallySizedBox(
-          heightFactor: 0.92,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(sheetContext).padding.bottom),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Solicitar cita medica',
-                    style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Seleccionar mascota',
-                          style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return FractionallySizedBox(
+              heightFactor: 0.92,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(sheetContext).padding.bottom),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Solicitar cita medica',
+                        style: Theme.of(sheetContext).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
                         ),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: List<Widget>.generate(_pets.length, (index) {
-                            final item = _pets[index];
-                            final selected = index == _selectedPetIndex;
-                            return ChoiceChip(
-                              label: Text(item.name),
-                              selected: selected,
-                              onSelected: (_) {
-                                setState(() {
-                                  _selectedPetIndex = index;
-                                });
-                              },
-                            );
-                          }),
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          'Motivo de la cita',
-                          style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        TextFormField(
-                          controller: _reasonController,
-                          minLines: 5,
-                          maxLines: 8,
-                          textInputAction: TextInputAction.newline,
-                          decoration: const InputDecoration(
-                            hintText: 'Describe por que necesitas la cita medica para tu mascota',
-                            alignLabelWithHint: true,
-                            prefixIcon: Icon(Icons.edit_note_rounded),
-                          ),
-                          validator: (value) {
-                            final reason = value?.trim() ?? '';
-                            if (reason.isEmpty) return 'Ingresa el motivo de la cita';
-                            if (reason.length < 10) return 'Escribe un poco mas de detalle (minimo 10 caracteres)';
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'Fecha preferida',
-                          style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        InkWell(
-                          onTap: _pickDate,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Seleccionar fecha',
-                              prefixIcon: Icon(Icons.event_rounded),
-                            ),
-                            child: Text(_formatDate(_preferredDate)),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          'Hora preferida',
-                          style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        InkWell(
-                          onTap: _pickTime,
-                          borderRadius: BorderRadius.circular(16),
-                          child: InputDecorator(
-                            decoration: const InputDecoration(
-                              labelText: 'Seleccionar hora',
-                              prefixIcon: Icon(Icons.schedule_rounded),
-                            ),
-                            child: Text(_formatTime(_preferredTime)),
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-                        Row(
+                      ),
+                      const SizedBox(height: 20),
+                      Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.pop(sheetContext),
-                                child: const Text('Cancelar'),
+                            Text(
+                              'Seleccionar mascota',
+                              style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  final sent = _submitModel();
-                                  if (sent) Navigator.pop(sheetContext);
-                                },
-                                icon: const Icon(Icons.send_rounded),
-                                label: const Text('Enviar'),
+                            const SizedBox(height: 10),
+                            if (_isLoadingPets)
+                              const CircularProgressIndicator(color: AppColors.brand)
+                            else if (_pets.isEmpty)
+                              Text(
+                                'No tienes mascotas registradas.',
+                                style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                                  color: AppColors.textSecondary,
+                                ),
+                              )
+                            else
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: List<Widget>.generate(_pets.length, (index) {
+                                  final item = _pets[index];
+                                  final selected = index == _selectedPetIndex;
+                                  return ChoiceChip(
+                                    label: Text(item.name),
+                                    selected: selected,
+                                    onSelected: (_) {
+                                      setState(() => _selectedPetIndex = index);
+                                      setSheetState(() {});
+                                    },
+                                  );
+                                }),
                               ),
+                            const SizedBox(height: 18),
+                            Text(
+                              'Motivo de la cita',
+                              style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextFormField(
+                              controller: _reasonController,
+                              minLines: 5,
+                              maxLines: 8,
+                              textInputAction: TextInputAction.newline,
+                              decoration: const InputDecoration(
+                                hintText: 'Describe por que necesitas la cita medica para tu mascota',
+                                alignLabelWithHint: true,
+                                prefixIcon: Icon(Icons.edit_note_rounded),
+                              ),
+                              validator: (value) {
+                                final reason = value?.trim() ?? '';
+                                if (reason.isEmpty) return 'Ingresa el motivo de la cita';
+                                if (reason.length < 10) return 'Escribe un poco mas de detalle (minimo 10 caracteres)';
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Fecha preferida',
+                              style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            InkWell(
+                              onTap: () async {
+                                await _pickDate();
+                                setSheetState(() {});
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Seleccionar fecha',
+                                  prefixIcon: Icon(Icons.event_rounded),
+                                ),
+                                child: Text(_formatDate(_preferredDate)),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Hora preferida',
+                              style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            InkWell(
+                              onTap: () async {
+                                await _pickTime();
+                                setSheetState(() {});
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Seleccionar hora',
+                                  prefixIcon: Icon(Icons.schedule_rounded),
+                                ),
+                                child: Text(_formatTime(_preferredTime)),
+                              ),
+                            ),
+                            const SizedBox(height: 18),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _isSending ? null : () => Navigator.pop(sheetContext),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isSending
+                                        ? null
+                                        : () {
+                                            if (!_formKey.currentState!.validate()) return;
+                                            // Cierra modal inmediatamente — previene doble tap
+                                            Navigator.pop(sheetContext);
+                                            _submitRequest(sheetContext);
+                                          },
+                                    icon: const Icon(Icons.send_rounded),
+                                    label: const Text('Enviar'),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -333,35 +451,17 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     );
   }
 
-  Widget _modeBanner() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.infoBg,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.info.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.info_outline_rounded, color: AppColors.info),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Esta vista esta modelada. Luego el formulario real enviara la solicitud al backend y el veterinario la aprobara o rechazara.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _requestCard(AppointmentRequest request) {
+    final petName = request.patientName ?? 'Sin mascota';
+    final dateStr = _formatPreferredDate(request.preferredDate);
+    final timeStr = request.preferredTime != null
+        ? '${request.preferredTime!.substring(0, 5)}'
+        : null;
+    final metaStr = [dateStr, if (timeStr != null) timeStr].join(' | ');
+    final note = request.staffNotes?.isNotEmpty == true
+        ? request.staffNotes!
+        : request.reason;
 
-
-  Widget _requestCard(_AppointmentRequest request) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -375,7 +475,7 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
           Row(
             children: [
               NetworkAvatar(
-                imageUrl: AppMedia.petImageFor(name: request.petName),
+                imageUrl: AppMedia.petImageFor(name: petName),
                 size: 54,
               ),
               const SizedBox(width: 12),
@@ -383,11 +483,16 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${request.petName} - ${request.type}', style: Theme.of(context).textTheme.titleSmall),
+                    Text(
+                      petName,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                     const SizedBox(height: 4),
                     Text(
-                      '${request.date} | ${request.time}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                      metaStr,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -397,62 +502,112 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
           ),
           const SizedBox(height: 10),
           Text(
-            request.note,
+            note,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
-                  height: 1.4,
-                ),
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  Widget _flowCard() {
-    final steps = <_FlowStep>[
-      const _FlowStep(
-        title: 'Solicitud enviada',
-        subtitle: 'El usuario completa el formulario desde la app.',
-        icon: Icons.send_rounded,
-        color: AppColors.brand,
-      ),
-      const _FlowStep(
-        title: 'Revision veterinaria',
-        subtitle: 'El veterinario revisa agenda y motivo de la cita.',
-        icon: Icons.rate_review_rounded,
-        color: AppColors.warning,
-      ),
-      const _FlowStep(
-        title: 'Confirmacion o rechazo',
-        subtitle: 'La solicitud cambia de estado y se notifica al usuario.',
-        icon: Icons.verified_rounded,
-        color: AppColors.success,
-      ),
-      const _FlowStep(
-        title: 'Atencion',
-        subtitle: 'La cita se atiende en la fecha y hora confirmadas.',
-        icon: Icons.medical_services_rounded,
-        color: AppColors.accent,
-      ),
-    ];
+  void _showRequestDetail(AppointmentRequest r) {
+    final petName = r.patientName ?? 'Sin mascota';
+    final dateStr = _formatPreferredDate(r.preferredDate);
+    final timeStr = r.preferredTime != null ? r.preferredTime!.substring(0, 5) : null;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceStrong,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      child: Column(
-        children: steps
-            .map(
-              (step) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _flowStepCard(step),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(ctx).padding.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
               ),
-            )
-            .toList(growable: false),
-      ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Detalle de solicitud',
+                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  _statusPill(r.status.label, r.status.color),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _detailRow(ctx, 'Mascota', petName),
+              if (r.preferredDate != null) ...[
+                const SizedBox(height: 8),
+                _detailRow(ctx, 'Fecha preferida', '$dateStr${timeStr != null ? '  ·  $timeStr' : ''}'),
+              ],
+              const SizedBox(height: 12),
+              Text('Motivo', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(r.reason, style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.45)),
+              if (r.staffNotes != null && r.staffNotes!.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text('Nota del veterinario', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.activeSoft,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.brand.withOpacity(0.2)),
+                  ),
+                  child: Text(r.staffNotes!, style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.45)),
+                ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cerrar'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(BuildContext ctx, String label, String value) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 4,
+          child: Text(label, style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
+        ),
+        Expanded(
+          flex: 6,
+          child: Text(value, textAlign: TextAlign.right, style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ),
+      ],
     );
   }
 
@@ -479,9 +634,9 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
               Text(
                 step.subtitle,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.4,
-                    ),
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
               ),
             ],
           ),
@@ -490,29 +645,100 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     );
   }
 
+  void _showAppointmentsFlowInfo() {
+    final steps = <_FlowStep>[
+      const _FlowStep(
+        title: 'Completa la solicitud',
+        subtitle: 'Ingresa motivo, fecha y hora desde el formulario.',
+        icon: Icons.send_rounded,
+        color: AppColors.brand,
+      ),
+      const _FlowStep(
+        title: 'Revision veterinaria',
+        subtitle: 'El veterinario valida agenda y prioridad del caso.',
+        icon: Icons.rate_review_rounded,
+        color: AppColors.warning,
+      ),
+      const _FlowStep(
+        title: 'Confirmacion de cita',
+        subtitle: 'Recibes la fecha y hora final segun disponibilidad del veterinario.',
+        icon: Icons.verified_rounded,
+        color: AppColors.success,
+      ),
+    ];
 
-  Widget _glassChip(IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+    showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 15, color: Colors.white),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700),
-            ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            16,
+            20,
+            20 + MediaQuery.of(sheetContext).padding.bottom,
           ),
-        ],
-      ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Flujo de citas medicas',
+                style: Theme.of(sheetContext).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Sigue este flujo para solicitar y confirmar una cita.',
+                style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceStrong,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  children: steps
+                      .map(
+                        (step) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _flowStepCard(step),
+                        ),
+                      )
+                      .toList(growable: false),
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: const Text('Entendido'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -526,9 +752,9 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       child: Text(
         label,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-            ),
+          color: color,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -540,11 +766,8 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 90)),
     );
-
     if (!mounted || selected == null) return;
-    setState(() {
-      _preferredDate = selected;
-    });
+    setState(() => _preferredDate = selected);
   }
 
   Future<void> _pickTime() async {
@@ -552,40 +775,47 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
       context: context,
       initialTime: _preferredTime ?? TimeOfDay.now(),
     );
-
     if (!mounted || selected == null) return;
-    setState(() {
-      _preferredTime = selected;
-    });
+    setState(() => _preferredTime = selected);
   }
 
-  bool _submitModel() {
-    if (!_formKey.currentState!.validate()) return false;
-
-    final reason = _reasonController.text.trim();
-    setState(() {
-      _requests.insert(
-        0,
-        _AppointmentRequest(
-          petName: _selectedPet.name,
-          type: 'Solicitud',
-          date: _formatDate(_preferredDate),
-          time: _formatTime(_preferredTime),
-          status: _AppointmentStatus.pending,
-          note: reason,
-        ),
+  Future<void> _submitRequest(BuildContext sheetContext) async {
+    if (_isSending) return;
+    setState(() => _isSending = true);
+    try {
+      final payload = CreateAppointmentRequestPayload(
+        reason: _reasonController.text.trim(),
+        patientId: _selectedPet?.id,
+        preferredDate: _preferredDate != null ? _toIsoDate(_preferredDate!) : null,
+        preferredTime: _preferredTime != null ? _toIsoTime(_preferredTime!) : null,
       );
-    });
 
-    _reasonController.clear();
+      final created = await _repo.create(payload);
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Formulario modelado. Luego se conectara al backend de citas.'),
-      ),
-    );
+      setState(() {
+        _requests.insert(0, created);
+        _reasonController.clear();
+      });
 
-    return true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Solicitud enviada correctamente.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      String msg = 'No se pudo enviar la solicitud. Intenta de nuevo.';
+      try {
+        final dynamic err = (e as dynamic).response?.data;
+        if (err is Map && err['message'] != null) {
+          msg = err['message'].toString();
+        }
+      } catch (_) {}
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 4)),
+      );
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
   String _formatDate(DateTime? date) {
@@ -595,44 +825,32 @@ class _AppointmentsPageState extends State<AppointmentsPage> {
     return '$day/$month/${date.year}';
   }
 
+  String _formatPreferredDate(String? isoDate) {
+    if (isoDate == null || isoDate.isEmpty) return 'Sin fecha preferida';
+    final parts = isoDate.split('-');
+    if (parts.length != 3) return isoDate;
+    return '${parts[2]}/${parts[1]}/${parts[0]}';
+  }
+
   String _formatTime(TimeOfDay? time) {
     if (time == null) return 'Sin hora';
     final hour = time.hour.toString().padLeft(2, '0');
     final minute = time.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
   }
-}
 
-class _AppointmentPet {
-  const _AppointmentPet({
-    required this.name,
-    required this.species,
-    required this.breed,
-    required this.code,
-  });
+  String _toIsoDate(DateTime date) {
+    final y = date.year.toString().padLeft(4, '0');
+    final m = date.month.toString().padLeft(2, '0');
+    final d = date.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
+  }
 
-  final String name;
-  final String species;
-  final String breed;
-  final String code;
-}
-
-class _AppointmentRequest {
-  const _AppointmentRequest({
-    required this.petName,
-    required this.type,
-    required this.date,
-    required this.time,
-    required this.status,
-    required this.note,
-  });
-
-  final String petName;
-  final String type;
-  final String date;
-  final String time;
-  final _AppointmentStatus status;
-  final String note;
+  String _toIsoTime(TimeOfDay time) {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
 }
 
 class _FlowStep {
@@ -647,16 +865,4 @@ class _FlowStep {
   final String subtitle;
   final IconData icon;
   final Color color;
-}
-
-enum _AppointmentStatus {
-  pending('Pendiente', AppColors.warning, Icons.hourglass_top_rounded),
-  confirmed('Confirmada', AppColors.success, Icons.verified_rounded),
-  rejected('Rechazada', AppColors.error, Icons.cancel_rounded);
-
-  const _AppointmentStatus(this.label, this.color, this.icon);
-
-  final String label;
-  final Color color;
-  final IconData icon;
 }

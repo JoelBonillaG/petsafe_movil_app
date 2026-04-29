@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:petsafe_movil_app/app/theme/app_colors.dart';
 import 'package:petsafe_movil_app/core/constants/app_media.dart';
+import 'package:petsafe_movil_app/core/network/api_failure.dart';
 import 'package:petsafe_movil_app/core/widgets/feature_page_scaffold.dart';
 import 'package:petsafe_movil_app/core/widgets/network_image_tiles.dart';
+import 'package:petsafe_movil_app/features/pets/data/pets_models.dart';
+import 'package:petsafe_movil_app/features/pets/data/pets_repository_factory.dart';
+import 'package:petsafe_movil_app/features/vaccinations/data/vaccination_models.dart';
+import 'package:petsafe_movil_app/features/vaccinations/data/vaccination_repository.dart';
+import 'package:petsafe_movil_app/features/vaccinations/data/vaccination_repository_factory.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -12,63 +18,145 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  late final List<_HistoryPet> _pets = <_HistoryPet>[
-    const _HistoryPet(
-      name: 'Luna',
-      code: 'PET-001',
-      species: 'Perro',
-      breed: 'Labrador',
-      lastUpdate: '12/03/2026',
-      lastVisit: '08/03/2026',
-      summary:
-          'Control general estable, plan de seguimiento en 30 dias y vacunas al dia.',
-      totalPages: 6,
-      consults: 8,
-      vaccines: 5,
-      dewormings: 3,
-      procedures: 2,
-      color: AppColors.brand,
-    ),
-    const _HistoryPet(
-      name: 'Mia',
-      code: 'PET-014',
-      species: 'Gato',
-      breed: 'Angora',
-      lastUpdate: '21/02/2026',
-      lastVisit: '20/02/2026',
-      summary:
-          'Historia con controles periodicos, desparasitacion reciente y observacion nutricional.',
-      totalPages: 4,
-      consults: 6,
-      vaccines: 4,
-      dewormings: 2,
-      procedures: 1,
-      color: AppColors.accent,
-    ),
-    const _HistoryPet(
-      name: 'Rocky',
-      code: 'PET-019',
-      species: 'Perro',
-      breed: 'Criollo',
-      lastUpdate: '05/01/2026',
-      lastVisit: '28/12/2025',
-      summary:
-          'Registro con tratamiento ortopedico, control de peso y seguimiento de recuperacion.',
-      totalPages: 5,
-      consults: 10,
-      vaccines: 6,
-      dewormings: 4,
-      procedures: 4,
-      color: AppColors.primary,
-    ),
-  ];
+  VaccinationRepository? _vaccinationRepository;
+  List<PetProfile> _pets = <PetProfile>[];
+  bool _isLoading = false;
+  String? _errorMessage;
 
   int _selectedIndex = 0;
 
-  _HistoryPet get _selectedPet => _pets[_selectedIndex];
+  VaccinationPlan? _plan;
+  VaccinationApplicationsResult? _applications;
+  bool _isLoadingVaccinations = false;
+  String? _vaccinationError;
+
+  PetProfile? get _selectedPet =>
+      _pets.isNotEmpty ? _pets[_selectedIndex] : null;
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final petsRepo = await PetsRepositoryFactory.create();
+      final vaccinationRepo = VaccinationRepositoryFactory.create();
+      final result = await petsRepo.loadPets(limit: 100);
+      if (!mounted) return;
+      setState(() {
+        _vaccinationRepository = vaccinationRepo;
+        _pets = result.pets;
+        _selectedIndex = 0;
+        _isLoading = false;
+      });
+      if (_pets.isNotEmpty) {
+        await _loadVaccinations(_pets[0].id);
+      }
+    } on ApiFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.message;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString().replaceFirst('ApiFailure: ', '');
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadVaccinations(int patientId) async {
+    final repo = _vaccinationRepository;
+    if (repo == null) return;
+
+    setState(() {
+      _isLoadingVaccinations = true;
+      _vaccinationError = null;
+      _plan = null;
+      _applications = null;
+    });
+
+    try {
+      final results = await Future.wait([
+        repo.loadPatientPlan(patientId),
+        repo.loadPatientApplications(patientId),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _plan = results[0] as VaccinationPlan;
+        _applications = results[1] as VaccinationApplicationsResult;
+        _isLoadingVaccinations = false;
+      });
+    } on ApiFailure catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _vaccinationError = e.message;
+        _isLoadingVaccinations = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _vaccinationError = 'No se pudo cargar el historial de vacunacion.';
+        _isLoadingVaccinations = false;
+      });
+    }
+  }
+
+  void _onPetSelected(int index) {
+    setState(() => _selectedIndex = index);
+    final pet = _pets[index];
+    _loadVaccinations(pet.id);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const FeaturePageScaffold(
+        title: 'Historial clinico',
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_errorMessage != null && _pets.isEmpty) {
+      return FeaturePageScaffold(
+        title: 'Historial clinico',
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.cloud_off_rounded, size: 52, color: AppColors.textSecondary),
+                const SizedBox(height: 16),
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.textSecondary,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: _bootstrap,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     final pet = _selectedPet;
 
     return FeaturePageScaffold(
@@ -76,78 +164,350 @@ class _HistoryPageState extends State<HistoryPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
         children: [
-          _heroCard(pet),
+          _heroCard(),
           const SizedBox(height: 16),
           Text(
             'Selecciona una mascota',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: List<Widget>.generate(_pets.length, (index) {
-              final item = _pets[index];
-              final selected = index == _selectedIndex;
-              return ChoiceChip(
-                label: Text(item.name),
-                selected: selected,
-                onSelected: (_) {
-                  setState(() {
-                    _selectedIndex = index;
-                  });
-                },
-              );
-            }),
-          ),
-          const SizedBox(height: 16),
-          _pdfPreviewCard(pet),
-          const SizedBox(height: 16),
-          Text(
-            'Resumen del expediente',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(child: _metricCard('Consultas', pet.consults.toString(), Icons.medical_services_rounded)),
-              const SizedBox(width: 12),
-              Expanded(child: _metricCard('Vacunas', pet.vaccines.toString(), Icons.vaccines_rounded)),
-            ],
-          ),
+          if (_pets.isEmpty)
+            Text(
+              'No tienes mascotas registradas.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List<Widget>.generate(_pets.length, (index) {
+                final item = _pets[index];
+                final selected = index == _selectedIndex;
+                return ChoiceChip(
+                  label: Text(item.name),
+                  selected: selected,
+                  onSelected: (_) => _onPetSelected(index),
+                );
+              }),
+            ),
+          if (pet != null) ...[
+            const SizedBox(height: 16),
+            _pdfPreviewCard(pet),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _metricCard(
+                    'Condiciones',
+                    pet.conditions.length.toString(),
+                    Icons.monitor_heart_rounded,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _metricCard(
+                    'Peso actual',
+                    pet.weightLabel,
+                    Icons.scale_rounded,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Vacunacion',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 10),
+            _vaccinationSection(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _vaccinationSection() {
+    if (_isLoadingVaccinations) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceStrong,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Column(
+          children: [
+            CircularProgressIndicator(color: AppColors.brand),
+            SizedBox(height: 12),
+            Text('Cargando historial de vacunacion...'),
+          ],
+        ),
+      );
+    }
+
+    if (_vaccinationError != null && _plan == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.warningBg,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.warning.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                _vaccinationError!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final plan = _plan;
+    final applications = _applications;
+
+    if (plan == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceStrong,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Text(
+          'No hay plan de vacunacion registrado.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _metricCard(
+                'Aplicadas',
+                plan.appliedCount.toString(),
+                Icons.check_circle_rounded,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _metricCard(
+                'Pendientes',
+                plan.pendingCount.toString(),
+                Icons.schedule_rounded,
+              ),
+            ),
+          ],
+        ),
+        if (plan.schemeName != null) ...[
           const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: _metricCard('Procedimientos', pet.procedures.toString(), Icons.healing_rounded),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.activeSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.vaccines_rounded, size: 16, color: AppColors.brand),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Esquema: ${plan.schemeName}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.brand,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
+        ],
+        if (plan.doses.isNotEmpty) ...[
           const SizedBox(height: 16),
           Text(
-            'Historial en PDF',
-            style: Theme.of(context).textTheme.titleMedium,
+            'Plan de dosis',
+            style: Theme.of(context).textTheme.titleSmall,
           ),
           const SizedBox(height: 10),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              ElevatedButton.icon(
-                onPressed: _showPdfPreview,
-                icon: const Icon(Icons.visibility_rounded),
-                label: const Text('Ver historial PDF'),
+          ...plan.doses.map((dose) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _doseCard(dose),
+          )),
+        ],
+        if (applications != null && applications.applications.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Aplicaciones registradas',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 10),
+          ...applications.applications.map((app) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _applicationCard(app),
+          )),
+        ],
+      ],
+    );
+  }
+
+  Widget _doseCard(VaccinationPlanDose dose) {
+    Color statusColor;
+    IconData statusIcon;
+    if (dose.isApplied) {
+      statusColor = AppColors.success;
+      statusIcon = Icons.check_circle_rounded;
+    } else if (dose.isOverdue) {
+      statusColor = AppColors.error;
+      statusIcon = Icons.cancel_rounded;
+    } else if (dose.isSkipped) {
+      statusColor = AppColors.textSecondary;
+      statusIcon = Icons.remove_circle_rounded;
+    } else {
+      statusColor = AppColors.warning;
+      statusIcon = Icons.schedule_rounded;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceStrong,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Icon(statusIcon, color: statusColor, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  dose.vaccineName,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  dose.doseLabel,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (dose.scheduledDate != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Programada: ${_formatDate(dose.scheduledDate!)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+                if (dose.appliedDate != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Aplicada: ${_formatDate(dose.appliedDate!)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              dose.statusLabel,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: statusColor,
+                fontWeight: FontWeight.w700,
               ),
-              OutlinedButton.icon(
-                onPressed: _showPendingAction,
-                icon: const Icon(Icons.picture_as_pdf_rounded),
-                label: const Text('Exportar PDF'),
-              ),
-            ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _heroCard(_HistoryPet pet) {
+  Widget _applicationCard(VaccinationApplication app) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceStrong,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.activeSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.vaccines_rounded, color: AppColors.brand, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(app.vaccineName, style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 4),
+                Text(
+                  _formatDate(app.applicationDate),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                if (app.batchNumber != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Lote: ${app.batchNumber}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+                if (app.nextDoseDate != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'Proxima: ${_formatDate(app.nextDoseDate!)}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.brand,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroCard() {
     final theme = Theme.of(context);
     return Container(
       clipBehavior: Clip.antiAlias,
@@ -183,7 +543,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Revisa el historial clinico de tu mascota y exportalo en PDF.',
+                  'Revisa el historial de vacunacion y condiciones de tu mascota.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: Colors.white.withValues(alpha: 0.93),
                     height: 1.45,
@@ -197,7 +557,7 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  Widget _pdfPreviewCard(_HistoryPet pet) {
+  Widget _pdfPreviewCard(PetProfile pet) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -205,69 +565,29 @@ class _HistoryPageState extends State<HistoryPage> {
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          NetworkImageCard(
-            imageUrl: AppMedia.petImageFor(name: pet.name, species: pet.species),
-            height: 140,
-            borderRadius: 18,
-            showBorder: false,
-            showShadow: false,
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.activeSoft,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.brand),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Expediente de ${pet.name}', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${pet.species} | ${pet.breed} | Ultima visita ${pet.lastVisit}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFFDFDFD),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.border),
+              color: AppColors.activeSoft,
+              borderRadius: BorderRadius.circular(14),
             ),
+            child: const Icon(Icons.pets_rounded, color: AppColors.brand),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Resumen clinico',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+                Text('Expediente de ${pet.name}', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 4),
                 Text(
-                  pet.summary,
+                  '${pet.speciesLabel} | ${pet.breedLabel} | ${pet.ageLabel}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        height: 1.4,
-                      ),
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
@@ -301,106 +621,9 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-
-  void _showPdfPreview() {
-    final pet = _selectedPet;
-
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.85,
-          minChildSize: 0.55,
-          maxChildSize: 0.95,
-          builder: (_, controller) {
-            return Container(
-              decoration: const BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-              ),
-              child: ListView(
-                controller: controller,
-                padding: EdgeInsets.fromLTRB(
-                  20,
-                  16,
-                  20,
-                  28 + MediaQuery.of(context).padding.bottom,
-                ),
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    'Vista previa PDF',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Modelo visual del documento que luego generara el backend.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                  ),
-                  const SizedBox(height: 18),
-                  _pdfPreviewCard(pet),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showPendingAction() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcion modelada. Luego se conectara al backend.'),
-      ),
-    );
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 }
-
-class _HistoryPet {
-  const _HistoryPet({
-    required this.name,
-    required this.code,
-    required this.species,
-    required this.breed,
-    required this.lastUpdate,
-    required this.lastVisit,
-    required this.summary,
-    required this.totalPages,
-    required this.consults,
-    required this.vaccines,
-    required this.dewormings,
-    required this.procedures,
-    required this.color,
-  });
-
-  final String name;
-  final String code;
-  final String species;
-  final String breed;
-  final String lastUpdate;
-  final String lastVisit;
-  final String summary;
-  final int totalPages;
-  final int consults;
-  final int vaccines;
-  final int dewormings;
-  final int procedures;
-  final Color color;
-}
-

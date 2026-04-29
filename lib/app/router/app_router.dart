@@ -8,6 +8,7 @@ import 'package:petsafe_movil_app/features/dashboard/presentation/dashboard_page
 import 'package:petsafe_movil_app/features/history/presentation/history_page.dart';
 import 'package:petsafe_movil_app/features/pets/presentation/pets_page.dart';
 import 'package:petsafe_movil_app/features/profile/presentation/profile_page.dart';
+import 'package:petsafe_movil_app/features/notifications/presentation/notifications_page.dart';
 import 'package:petsafe_movil_app/features/reminders/presentation/reminders_page.dart';
 import 'package:petsafe_movil_app/features/shell/presentation/home_shell.dart';
 
@@ -27,6 +28,7 @@ class AppRouter {
       AppRoutes.reminders => const RemindersPage(),
       AppRoutes.adoption => const AdoptionPage(),
       AppRoutes.profile => const ProfilePage(),
+      AppRoutes.notifications => const NotificationsPage(),
       _ => const LoginPage(),
     };
 

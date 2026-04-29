@@ -13,7 +13,7 @@ class DashboardPage extends StatelessWidget {
     final items = <_DashboardFeature>[
       const _DashboardFeature(
         title: 'Mascotas',
-        description: 'Consulta ficha, QR y datos clinicos principales.',
+        description: 'Accede al perfil completo de tus mascotas.',
         icon: Icons.pets_rounded,
         color: AppColors.brand,
         routeName: AppRoutes.pets,
@@ -21,7 +21,7 @@ class DashboardPage extends StatelessWidget {
       ),
       const _DashboardFeature(
         title: 'Citas',
-        description: 'Solicita una cita y revisa su estado de aprobacion.',
+        description: 'Organiza la atencion de tu mascota sin complicaciones.',
         icon: Icons.calendar_month_rounded,
         color: AppColors.warning,
         routeName: AppRoutes.appointments,
@@ -29,15 +29,15 @@ class DashboardPage extends StatelessWidget {
       ),
       const _DashboardFeature(
         title: 'Historial',
-        description: 'Vista previa del expediente y futura exportacion PDF.',
+        description: 'Consulta y gestiona todos los registros clinicos desde un solo lugar.',
         icon: Icons.description_rounded,
         color: AppColors.accent,
         routeName: AppRoutes.history,
-        imageUrl: AppMedia.vetHero,
+        imageUrl: AppMedia.historyHero,
       ),
       const _DashboardFeature(
         title: 'Adopcion',
-        description: 'Catalogo visual de mascotas disponibles para adopcion.',
+        description: 'Descubre mascotas en busca de hogar y encuentra tu companero ideal.',
         icon: Icons.favorite_rounded,
         color: AppColors.success,
         routeName: AppRoutes.adoption,
@@ -52,10 +52,6 @@ class DashboardPage extends StatelessWidget {
         children: [
           _heroCard(context),
           const SizedBox(height: 16),
-          _modeBanner(context),
-          const SizedBox(height: 16),
-          _statsRow(context),
-          const SizedBox(height: 16),
           Text(
             'Modulos principales',
             style: Theme.of(context).textTheme.titleMedium,
@@ -69,13 +65,6 @@ class DashboardPage extends StatelessWidget {
                 ),
               )
               .toList(growable: false),
-          const SizedBox(height: 6),
-          Text(
-            'Destacado de hoy',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 10),
-          _featuredPetCard(context),
         ],
       ),
     );
@@ -136,92 +125,6 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _modeBanner(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.infoBg,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.info.withOpacity(0.18)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.auto_awesome_rounded, color: AppColors.info),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Este inicio mezcla banner, resumen y accesos directos para que la app se sienta mas viva y util desde el primer vistazo.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondary,
-                    height: 1.45,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statsRow(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Expanded(child: _metricCard(context, 'Mascotas', '3', Icons.pets_rounded, AppColors.brand)),
-            const SizedBox(width: 12),
-            Expanded(child: _metricCard(context, 'Citas', '1', Icons.calendar_month_rounded, AppColors.warning)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(child: _metricCard(context, 'Historial', '12', Icons.description_rounded, AppColors.accent)),
-            const SizedBox(width: 12),
-            Expanded(child: _metricCard(context, 'Adopcion', '4', Icons.favorite_rounded, AppColors.success)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _metricCard(
-    BuildContext context,
-    String label,
-    String value,
-    IconData icon,
-    Color accent,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceStrong,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: accent.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, size: 20, color: accent),
-          ),
-          const SizedBox(height: 12),
-          Text(value, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _featureCard(BuildContext context, _DashboardFeature feature) {
     return Material(
@@ -282,66 +185,6 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _featuredPetCard(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => Navigator.of(context).pushNamed(AppRoutes.adoption),
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: NetworkImageCard(
-            imageUrl: AppMedia.adoptionHero,
-            height: 190,
-            borderRadius: 24,
-            showBorder: false,
-            overlayGradient: const LinearGradient(
-              colors: [
-                Color(0xAA000000),
-                Color(0x22000000),
-              ],
-              begin: Alignment.bottomCenter,
-              end: Alignment.topCenter,
-            ),
-            foreground: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.18),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: const Text(
-                      'Historias y adopciones',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Explora mascotas con una presentacion mas visual y emotiva.',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: Colors.white,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _glassChip(IconData icon, String label) {
     return Expanded(
