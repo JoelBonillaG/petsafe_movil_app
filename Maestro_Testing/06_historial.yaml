@@ -1,0 +1,20 @@
+appId: com.example.petsafe_movil_app
+---
+- runFlow: _helpers/login.yaml
+- tapOn: "Historial\nTab 4 of 6"
+- waitForAnimationToEnd
+- assertVisible: "Selecciona una mascota"
+- tapOn: "Max"
+- waitForAnimationToEnd
+- assertVisible: "Consultas"
+- assertVisible: "Vacunacion"
+- scrollUntilVisible:
+    element:
+      text: "Descargar historial PDF"
+    timeout: 10000
+- tapOn: "Descargar historial PDF"
+- waitForAnimationToEnd
+- tapOn: "Back"
+- waitForAnimationToEnd
+
+

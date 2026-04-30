@@ -1,0 +1,22 @@
+appId: com.example.petsafe_movil_app
+---
+- runFlow: _helpers/login.yaml
+- tapOn: "Citas\nTab 3 of 6"
+- waitForAnimationToEnd
+- assertVisible: "Citas medicas"
+- tapOn: "Solicitar cita"
+- waitForAnimationToEnd
+- assertVisible: "Solicitar cita medica"
+- tapOn: "Max"
+- tapOn: "Describe por que necesitas la cita medica para tu mascota"
+- inputText: "Revision de control general y chequeo de vacunas pendientes para Max"
+- tapOn: "Seleccionar fecha\n07/05/2026"
+- waitForAnimationToEnd
+- tapOn: "OK"
+- tapOn: "Seleccionar hora\n09:30"
+- waitForAnimationToEnd
+- tapOn: "OK"
+- tapOn: "Enviar"
+- waitForAnimationToEnd
+- assertVisible: "Max\n07/05/2026 | 09:30\nPendiente\nRevision de control general y chequeo de vacunas pendientes para Max"
+
