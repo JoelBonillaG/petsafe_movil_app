@@ -1,0 +1,9 @@
+appId: com.example.petsafe_movil_app
+---
+- runFlow: _helpers/login.yaml
+- tapOn: "JB"
+- waitForAnimationToEnd
+- assertVisible: "Cerrar sesion"
+- tapOn: "Cerrar sesion"
+- waitForAnimationToEnd
+- assertVisible: "Bienvenido de nuevo"

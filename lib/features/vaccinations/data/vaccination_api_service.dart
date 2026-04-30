@@ -27,11 +27,11 @@ class VaccinationApiService {
 
   Future<VaccinationApplicationsResult> getPatientApplications(int patientId) async {
     final options = await _authOptions();
-    final response = await _dio.get<Map<String, dynamic>>(
+    final response = await _dio.get<dynamic>(
       '/vaccinations/patients/$patientId/applications',
       options: options,
     );
-    final data = response.data ?? <String, dynamic>{};
+    final data = response.data;
     return VaccinationApplicationsResult.fromJson(data);
   }
 

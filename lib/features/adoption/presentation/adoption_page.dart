@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:petsafe_movil_app/app/theme/app_colors.dart';
+import 'package:petsafe_movil_app/core/config/app_config.dart';
 import 'package:petsafe_movil_app/core/constants/app_media.dart';
 import 'package:petsafe_movil_app/core/widgets/feature_page_scaffold.dart';
 import 'package:petsafe_movil_app/core/widgets/network_image_tiles.dart';
@@ -20,29 +21,26 @@ class _AdoptionPageState extends State<AdoptionPage> {
   List<AdoptionItem> _items = <AdoptionItem>[];
   bool _isLoading = false;
   String? _errorMessage;
-  String _selectedFilter = 'Todos';
 
-  List<String> get _filters {
-    final species = _items
-        .map((i) => i.speciesLabel)
-        .toSet()
-        .toList(growable: false)
-      ..sort();
-    return <String>['Todos', ...species];
-  }
+  bool _wasTickerActive = false;
 
-  List<AdoptionItem> get _visibleItems {
-    if (_selectedFilter == 'Todos') return _items;
-    return _items
-        .where((i) => i.speciesLabel == _selectedFilter)
-        .toList(growable: false);
-  }
+  List<AdoptionItem> get _visibleItems => _items;
 
   @override
   void initState() {
     super.initState();
     _repository = AdoptionRepositoryFactory.create();
     _load();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isNowActive = TickerMode.of(context);
+    if (isNowActive && !_wasTickerActive) {
+      _load();
+    }
+    _wasTickerActive = isNowActive;
   }
 
   Future<void> _load() async {
@@ -95,7 +93,10 @@ class _AdoptionPageState extends State<AdoptionPage> {
           ),
         ),
       ],
-      body: _buildBody(),
+      body: RefreshIndicator(
+        onRefresh: _load,
+        child: _buildBody(),
+      ),
     );
   }
 
@@ -114,30 +115,6 @@ class _AdoptionPageState extends State<AdoptionPage> {
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
       children: [
         _heroCard(visible.length),
-        const SizedBox(height: 16),
-        Text(
-          'Filtros rapidos',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: _filters
-              .map((filter) {
-                final selected = filter == _selectedFilter;
-                return FilterChip(
-                  label: Text(filter),
-                  selected: selected,
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedFilter = filter;
-                    });
-                  },
-                );
-              })
-              .toList(growable: false),
-        ),
         const SizedBox(height: 16),
         Text(
           'Catalogo disponible',
@@ -160,35 +137,30 @@ class _AdoptionPageState extends State<AdoptionPage> {
   }
 
   Widget _errorState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 52,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _errorMessage!,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textSecondary,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: _load,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Reintentar'),
-            ),
-          ],
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(32),
+      children: [
+        const SizedBox(height: 60),
+        const Icon(Icons.cloud_off_rounded, size: 52, color: AppColors.textSecondary),
+        const SizedBox(height: 16),
+        Text(
+          _errorMessage!,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textSecondary,
+            height: 1.45,
+          ),
         ),
-      ),
+        const SizedBox(height: 20),
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: _load,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Reintentar'),
+          ),
+        ),
+      ],
     );
   }
 
@@ -268,7 +240,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 NetworkImageCard(
-                  imageUrl: item.imageUrl ?? AppMedia.adoptionImageFor(item.petName),
+                  imageUrl: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                      ? AppConfig.normalizeImageUrl(item.imageUrl!)
+                      : AppMedia.adoptionImageFor(item.petName),
                   height: 94,
                   width: 94,
                   borderRadius: 22,
@@ -298,9 +272,12 @@ class _AdoptionPageState extends State<AdoptionPage> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      if (item.contactPhone != null)
+                      if (item.contactName != null || item.contactPhone != null)
                         Text(
-                          'Contacto: ${item.contactPhone}',
+                          [
+                            if (item.contactName != null) item.contactName!,
+                            if (item.contactPhone != null) item.contactPhone!,
+                          ].join(' · '),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: AppColors.brand,
                             fontWeight: FontWeight.w700,
@@ -598,7 +575,9 @@ class _AdoptionPageState extends State<AdoptionPage> {
                 ),
                 const SizedBox(height: 18),
                 NetworkImageCard(
-                  imageUrl: item.imageUrl ?? AppMedia.adoptionImageFor(item.petName),
+                  imageUrl: item.imageUrl != null && item.imageUrl!.isNotEmpty
+                      ? AppConfig.normalizeImageUrl(item.imageUrl!)
+                      : AppMedia.adoptionImageFor(item.petName),
                   height: 180,
                   borderRadius: 24,
                   showBorder: false,
@@ -640,17 +619,34 @@ class _AdoptionPageState extends State<AdoptionPage> {
                     children: [
                       _detailRow('Especie', item.speciesLabel),
                       _detailRow('Raza', item.breedLabel),
+                      if (item.contactName != null)
+                        _detailRow('Contacto', item.contactName!),
                       if (item.contactPhone != null)
                         _detailRow('Telefono', item.contactPhone!),
+                      if (item.contactEmail != null)
+                        _detailRow('Correo', item.contactEmail!),
                       if (item.story != null) ...[
                         const SizedBox(height: 10),
+                        Text('Historia',
+                            style: Theme.of(sheetContext).textTheme.labelSmall
+                                ?.copyWith(color: AppColors.textSecondary)),
+                        const SizedBox(height: 4),
                         Text(
                           item.story!,
                           style: Theme.of(sheetContext).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: AppColors.textSecondary,
-                                height: 1.45,
-                              ),
+                              ?.copyWith(color: AppColors.textSecondary, height: 1.45),
+                        ),
+                      ],
+                      if (item.requirements != null) ...[
+                        const SizedBox(height: 10),
+                        Text('Requisitos',
+                            style: Theme.of(sheetContext).textTheme.labelSmall
+                                ?.copyWith(color: AppColors.textSecondary)),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.requirements!,
+                          style: Theme.of(sheetContext).textTheme.bodyMedium
+                              ?.copyWith(color: AppColors.textSecondary, height: 1.45),
                         ),
                       ],
                       if (item.tagNames.isNotEmpty) ...[

@@ -1,0 +1,9 @@
+appId: com.example.petsafe_movil_app
+---
+- runFlow: _helpers/login.yaml
+- tapOn: "Adopcion\nTab 5 of 6"
+- waitForAnimationToEnd
+- assertVisible: "Catalogo disponible"
+- tapOn: "Ver mas"
+- assertVisible: "Ficha de adopcion"
+- tapOn: "Cerrar"
