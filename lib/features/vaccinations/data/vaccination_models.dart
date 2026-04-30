@@ -15,20 +15,39 @@ class VaccinationPlanDose {
   final DateTime? scheduledDate;
   final DateTime? appliedDate;
 
-  bool get isApplied => status.toUpperCase() == 'APPLIED';
-  bool get isPending => status.toUpperCase() == 'PENDING';
-  bool get isOverdue => status.toUpperCase() == 'OVERDUE';
-  bool get isSkipped => status.toUpperCase() == 'SKIPPED';
+  bool get isPending {
+    final normalized = status.toUpperCase();
+    return normalized == 'PENDING' || normalized == 'NO_APLICADA';
+  }
+
+  bool get isOverdue {
+    final normalized = status.toUpperCase();
+    return normalized == 'OVERDUE' || normalized == 'VENCIDA';
+  }
+
+  bool get isSkipped {
+    final normalized = status.toUpperCase();
+    return normalized == 'SKIPPED' || normalized == 'OMITIDA';
+  }
+
+  bool get isApplied {
+    final normalized = status.toUpperCase();
+    return normalized == 'APPLIED' || normalized == 'APLICADA';
+  }
 
   String get statusLabel {
     switch (status.toUpperCase()) {
       case 'APPLIED':
+      case 'APLICADA':
         return 'Aplicada';
       case 'PENDING':
+      case 'NO_APLICADA':
         return 'Pendiente';
       case 'OVERDUE':
+      case 'VENCIDA':
         return 'Vencida';
       case 'SKIPPED':
+      case 'OMITIDA':
         return 'Omitida';
       default:
         return status;

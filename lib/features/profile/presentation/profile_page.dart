@@ -106,17 +106,27 @@ class _ProfilePageState extends State<ProfilePage> {
     setState(() => _isSaving = true);
 
     try {
-      final updated = await _apiService.updateMe(
+      await _apiService.updateMe(
         firstName: firstName,
         lastName: lastName,
         phone: phone.isEmpty ? null : phone,
       );
       if (!mounted) return;
+      final current = _user!;
       setState(() {
-        _user = updated;
-        _nameController.text = updated.firstName;
-        _lastNameController.text = updated.lastName;
-        _phoneController.text = updated.phone ?? '';
+        _user = AuthUser(
+          id: current.id,
+          email: current.email,
+          roles: current.roles,
+          firstName: firstName,
+          lastName: lastName,
+          phone: phone.isEmpty ? null : phone,
+          isVet: current.isVet,
+          requiresPasswordChange: current.requiresPasswordChange,
+        );
+        _nameController.text = firstName;
+        _lastNameController.text = lastName;
+        _phoneController.text = phone;
         _isSaving = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(

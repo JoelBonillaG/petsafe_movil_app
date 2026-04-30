@@ -375,7 +375,10 @@ class _NotificationsList extends StatelessWidget {
           ),
           onDismissed: (_) => onDelete(n),
           child: GestureDetector(
-            onTap: () => onMarkRead(n),
+            onTap: () {
+              onMarkRead(n);
+              _showNotifDetail(context, n);
+            },
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -460,6 +463,82 @@ class _NotificationsList extends StatelessWidget {
     final m = date.month.toString().padLeft(2, '0');
     return '$d/$m/${date.year}';
   }
+}
+
+// ── Notification detail sheet ────────────────────────────────────────────────
+
+void _showNotifDetail(BuildContext context, AppNotification n) {
+  final body = n.body.toLowerCase();
+  final title = n.title.toLowerCase();
+  final Color color;
+  final IconData icon;
+  if (body.contains('confirmada') || title.contains('confirmada')) {
+    color = const Color(0xFF22C55E); // success
+    icon = Icons.check_circle_rounded;
+  } else if (body.contains('rechazada') || title.contains('rechazada')) {
+    color = const Color(0xFFEF4444); // error
+    icon = Icons.cancel_rounded;
+  } else {
+    color = AppColors.brand;
+    icon = Icons.notifications_rounded;
+  }
+
+  showModalBottomSheet<void>(
+    context: context,
+    useSafeArea: true,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+    ),
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(ctx).padding.bottom),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(width: 44, height: 4,
+                decoration: BoxDecoration(color: AppColors.border, borderRadius: BorderRadius.circular(999))),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(n.title,
+                    style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800, color: color)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.2)),
+            ),
+            child: Text(n.body, style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(height: 1.6)),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cerrar'),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 // ── Auth action handler ──────────────────────────────────────────────────────

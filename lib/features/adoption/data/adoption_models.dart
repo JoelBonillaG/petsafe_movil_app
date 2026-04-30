@@ -24,7 +24,10 @@ class AdoptionItem {
     required this.speciesName,
     required this.breedName,
     required this.contactPhone,
+    required this.contactName,
+    required this.contactEmail,
     required this.story,
+    required this.requirements,
     required this.imageUrl,
     required this.tags,
   });
@@ -35,7 +38,10 @@ class AdoptionItem {
   final String? speciesName;
   final String? breedName;
   final String? contactPhone;
+  final String? contactName;
+  final String? contactEmail;
   final String? story;
+  final String? requirements;
   final String? imageUrl;
   final List<AdoptionTag> tags;
 
@@ -58,7 +64,10 @@ class AdoptionItem {
       speciesName: _readNullableString(json['speciesName']),
       breedName: _readNullableString(json['breedName']),
       contactPhone: _readNullableString(json['contactPhone']),
+      contactName: _readNullableString(json['contactName']),
+      contactEmail: _readNullableString(json['contactEmail']),
       story: _readNullableString(json['story']),
+      requirements: _readNullableString(json['requirements']),
       imageUrl: imageUrl,
       tags: _readTagList(json['tags']),
     );
@@ -72,7 +81,10 @@ class AdoptionItem {
       'speciesName': speciesName,
       'breedName': breedName,
       'contactPhone': contactPhone,
+      'contactName': contactName,
+      'contactEmail': contactEmail,
       'story': story,
+      'requirements': requirements,
       'imageUrl': imageUrl,
       'tags': tags.map((t) => t.toJson()).toList(growable: false),
     };

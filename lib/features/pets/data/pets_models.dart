@@ -145,6 +145,8 @@ class PetProfile {
     required this.breed,
     required this.color,
     required this.conditions,
+    this.imageUrl,
+    this.qrToken,
   });
 
   final int id;
@@ -162,6 +164,8 @@ class PetProfile {
   final PetCatalogItem? breed;
   final PetCatalogItem? color;
   final List<PetCondition> conditions;
+  final String? imageUrl;
+  final String? qrToken;
 
   bool get hasCode => code.trim().isNotEmpty;
 
@@ -224,6 +228,8 @@ class PetProfile {
   }
 
   factory PetProfile.fromJson(Map<String, dynamic> json) {
+    final imageMap = json['image'];
+    final rawImageUrl = imageMap is Map ? imageMap['url']?.toString() : null;
     return PetProfile(
       id: _readInt(json['id']),
       code: _readString(json['code']),
@@ -240,6 +246,8 @@ class PetProfile {
       breed: _readNested(json['breed'], PetCatalogItem.fromJson),
       color: _readNested(json['color'], PetCatalogItem.fromJson),
       conditions: _readNestedList(json['conditions'], PetCondition.fromJson),
+      imageUrl: rawImageUrl,
+      qrToken: _readNullableString(json['qrToken']),
     );
   }
 
@@ -260,6 +268,8 @@ class PetProfile {
       'breed': breed?.toJson(),
       'color': color?.toJson(),
       'conditions': conditions.map((condition) => condition.toJson()).toList(growable: false),
+      'imageUrl': imageUrl,
+      'qrToken': qrToken,
     };
   }
 }
