@@ -1,0 +1,6 @@
+appId: com.example.petsafe_movil_app
+---
+- runFlow: _helpers/login.yaml
+- tapOn: "Avisos\nTab 6 of 6"
+- waitForAnimationToEnd
+- assertVisible: "Notificaciones"

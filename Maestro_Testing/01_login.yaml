@@ -1,0 +1,13 @@
+appId: com.example.petsafe_movil_app
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- assertVisible: "Bienvenido de nuevo"
+- tapOn: "Correo"
+- inputText: "bjeferssonvinicio2005@gmail.com"
+- tapOn: "Contrasena"
+- inputText: "Cliente123!"
+- tapOn: "Entrar"
+- waitForAnimationToEnd
+- assertVisible: "Inicio"

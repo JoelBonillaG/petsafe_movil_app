@@ -1,0 +1,14 @@
+appId: com.example.petsafe_movil_app
+---
+- runFlow: _helpers/login.yaml
+- tapOn: "JB"
+- waitForAnimationToEnd
+- assertVisible: "Configurar perfil"
+- tapOn: "Configurar perfil"
+- waitForAnimationToEnd
+- assertVisible: "Perfil"
+- assertVisible: "Datos personales"
+- assertVisible: "Nombre"
+- assertVisible: "Apellido"
+- tapOn: "Guardar cambios"
+- waitForAnimationToEnd

@@ -1,0 +1,15 @@
+appId: com.example.petsafe_movil_app
+---
+- runFlow: _helpers/login.yaml
+- tapOn: "Mascotas\nTab 2 of 6"
+- waitForAnimationToEnd
+- tapOn: "Max\nMacho\nPerro - Labrador Retriever\nDEMO-MOBILE-001\n24.70 kg\n5 anos\nMicrochip: DEMO-CHIP-001"
+- waitForAnimationToEnd
+- assertVisible: "Informacion principal"
+- assertVisible: "Microchip"
+- assertVisible: "Sexo"
+- tapOn: "Cerrar"
+- waitForAnimationToEnd
+- assertVisible: "Max"
+
+

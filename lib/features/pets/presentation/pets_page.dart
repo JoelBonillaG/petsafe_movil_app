@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:petsafe_movil_app/app/theme/app_colors.dart';
+import 'package:petsafe_movil_app/core/config/app_config.dart';
 import 'package:petsafe_movil_app/core/constants/app_media.dart';
 import 'package:petsafe_movil_app/core/network/api_failure.dart';
 import 'package:petsafe_movil_app/core/widgets/feature_page_scaffold.dart';
@@ -954,11 +955,19 @@ class _PetsPageState extends State<PetsPage> {
   }
 
   String _qrPayloadForPet(PetProfile pet) {
+    if (pet.qrToken != null && pet.qrToken!.isNotEmpty) {
+      final base = AppConfig.assetBaseUrl;
+      return '$base/mascota/${pet.qrToken}';
+    }
+    // Fallback: custom payload si no hay qrToken
     final code = pet.code.trim().isNotEmpty ? pet.code.trim() : pet.id.toString();
     return 'PETSAFE|PATIENT|${pet.id}|$code';
   }
 
   String _petImageUrl(PetProfile pet) {
+    if (pet.imageUrl != null && pet.imageUrl!.isNotEmpty) {
+      return AppConfig.normalizeImageUrl(pet.imageUrl!);
+    }
     return AppMedia.petImageFor(name: pet.name, species: pet.speciesLabel);
   }
 

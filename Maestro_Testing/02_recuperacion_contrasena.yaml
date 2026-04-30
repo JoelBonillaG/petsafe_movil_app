@@ -1,0 +1,15 @@
+appId: com.example.petsafe_movil_app
+---
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+- assertVisible: "Bienvenido de nuevo"
+- tapOn: "Recuperar contrasena"
+- waitForAnimationToEnd
+- assertVisible: "Recupera tu acceso"
+- assertVisible: "Solicita un PIN por correo y luego define una contrasena nueva."
+- assertVisible: "Correo"
+- assertVisible: "Enviar PIN"
+- tapOn: "Volver al Inicio de sesion"
+- waitForAnimationToEnd
+- assertVisible: "Bienvenido de nuevo"
